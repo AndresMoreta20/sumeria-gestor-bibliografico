@@ -1,0 +1,62 @@
+import { defineStore } from "pinia";
+import { ref, computed } from "vue";
+import axios from "axios";
+import { login } from "@/auth.js";
+
+export const useMainStore = defineStore("main", () => {
+  const userName = ref("admin");
+  const userEmail = ref("");
+  const userToken = ref(sessionStorage.getItem("user-token") || "");
+
+  const userAvatar = computed(
+    () =>
+      `https://api.dicebear.com/7.x/avataaars/svg?seed=${userEmail.value.replace(
+        /[^a-z0-9]+/gi,
+        "-"
+      )}`
+  );
+
+  const isFieldFocusRegistered = ref(false);
+  const clients = ref([]);
+  const history = ref([]);
+
+  function setUser(payload) {
+    if (payload.name) {
+      userName.value = payload.name;
+    }
+    if (payload.email) {
+      userEmail.value = payload.email;
+    }
+    if (payload.token) {
+      userToken.value = payload.token;
+      sessionStorage.setItem("user-token", payload.token);
+    }
+  }
+
+  async function handleLogin(email, password) {
+    try {
+      const response = await login(email, password);
+      if (response.success) {
+        setUser({ email: response.email, token: response.token });
+        console.log("User email set in store:", response.email);
+      } else {
+        console.error("Credenciales incorrectas:", response.message);
+      }
+    } catch (error) {
+      console.error("Error durante el login:", error);
+      throw new Error(error.response?.data?.message || "Login failed");
+    }
+  }
+
+  return {
+    userName,
+    userEmail,
+    userToken,
+    userAvatar,
+    isFieldFocusRegistered,
+    clients,
+    history,
+    setUser,
+    handleLogin,
+  };
+});

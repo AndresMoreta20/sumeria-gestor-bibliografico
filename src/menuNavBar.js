@@ -10,33 +10,11 @@ import {
   mdiThemeLightDark,
   mdiGithub,
   mdiReact,
+  mdiKey,
 } from "@mdi/js";
-
-import { logout } from "@/auth.js"; // Adjust the path as necessary
-import { mdiKey } from "@mdi/js";
+import { logout } from "@/auth.js";
 
 export default [
-  // {
-  //   icon: mdiMenu,
-  //   label: "Sample menu",
-  //   menu: [
-  //     {
-  //       icon: mdiClockOutline,
-  //       label: "Item One",
-  //     },
-  //     {
-  //       icon: mdiCloud,
-  //       label: "Item Two",
-  //     },
-  //     {
-  //       isDivider: true,
-  //     },
-  //     {
-  //       icon: mdiCrop,
-  //       label: "Item Last",
-  //     },
-  //   ],
-  // },
   {
     isCurrentUser: true,
     menu: [
@@ -52,19 +30,6 @@ export default [
         isLogout: true,
         onClick: logout,
       },
-
-      //   {
-      //     icon: mdiEmail,
-      //     label: "Messages",
-      //   },
-      //   {
-      //     isDivider: true,
-      //   },
-      //   {
-      //     icon: mdiLogout,
-      //     label: "Log Out",
-      //     isLogout: true,
-      //   },
     ],
   },
   {
@@ -73,25 +38,4 @@ export default [
     isDesktopNoLabel: true,
     isToggleLightDark: true,
   },
-  // {
-  //   icon: mdiGithub,
-  //   label: "GitHub",
-  //   isDesktopNoLabel: true,
-  //   href: "https://github.com/justboil/admin-one-vue-tailwind",
-  //   target: "_blank",
-  // },
-  // {
-  //   icon: mdiReact,
-  //   label: "React version",
-  //   isDesktopNoLabel: true,
-  //   href: "https://github.com/justboil/admin-one-react-tailwind",
-  //   target: "_blank",
-  // },
-  // {
-  //   icon: mdiLogout,
-  //   label: "Log out",
-  //   isDesktopNoLabel: true,
-  //   isLogout: true,
-  //   to: "/",
-  // },
 ];

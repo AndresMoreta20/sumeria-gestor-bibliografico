@@ -1,5 +1,12 @@
 <script setup>
 import { defineProps } from "vue";
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+const goToNewCategory = () => {
+  router.push({ name: 'categoryForm' })
+}
 
 const props = defineProps({
   categories: {
@@ -21,7 +28,7 @@ const handleDelete = (category) => {
   <div class="overflow-x-auto">
     <div class="flex justify-between items-center mb-4">
       <button
-        class="bg-blue-500 text-white px-6 py-2 rounded-full shadow hover:bg-blue-600 transition duration-300 flex items-center"
+      @click="goToNewCategory" class="bg-blue-500 text-white px-6 py-2 rounded-full shadow hover:bg-blue-600 transition duration-300 flex items-center"
       >
         <span class="mdi mdi-plus mr-2"></span> Nueva Categoría
       </button>

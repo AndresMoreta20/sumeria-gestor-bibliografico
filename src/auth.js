@@ -1,26 +1,40 @@
 import axios from "axios";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "./firebase";
+import { useMainStore } from "@/stores/main.js";
 
 const API_URL = "https://cindyl23.sg-host.com/?rest_route=/simple-jwt-login/v1";
 
 export const login = async (email, password) => {
+  const mainStore = useMainStore();
+
   try {
+    // Try Firebase Authentication first
+    try {
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const user = userCredential.user;
+
+      // Firebase authentication successful
+      mainStore.setUser({ email: user.email, role: "publisher" });
+      return { success: true, email: user.email, isFirebase: true };
+    } catch (firebaseError) {
+      console.error("Firebase login failed:", firebaseError);
+    }
+
+    // If Firebase login fails, try Simple JWT
     const response = await axios.post(`${API_URL}/auth`, {
       email,
       password,
     });
 
-    const token = response.data.data.jwt; // Asegúrate de que este es el campo correcto para el token
-    sessionStorage.setItem("user-token", token);
+    const token = response.data.data.jwt;
+    mainStore.setUser({ email, token, role: "admin" });
 
-    console.log("Login response:", response); // Verificar la respuesta
-
-    // Extraer el correo electrónico del objeto de respuesta
-    const responseData = JSON.parse(response.config.data);
-    const userEmail = responseData.email;
-
-    sessionStorage.setItem("user-email", userEmail); // Almacenar el correo electrónico del usuario
-
-    return { success: true, email: userEmail }; // Devolver solo el correo electrónico
+    return { success: true, email, token, isFirebase: false };
   } catch (error) {
     console.error("Login error:", error);
     throw new Error(error.response?.data?.message || "Login failed");
@@ -50,13 +64,12 @@ export const getUserInfo = async () => {
 };
 
 export const logout = () => {
-  console.log("Logout function called");
-  sessionStorage.removeItem("user-token");
-  sessionStorage.removeItem("user-email"); // Eliminar el correo electrónico del usuario
-  console.log("Token and user email removed from sessionStorage");
-  window.location.href = "/login"; // Redirige al usuario a la página de inicio de sesión
+  const mainStore = useMainStore();
+  mainStore.resetUser();
+  window.location.href = "/login";
 };
 
 export const isAuthenticated = () => {
-  return !!sessionStorage.getItem("user-token");
+  const mainStore = useMainStore();
+  return !!mainStore.userToken || !!auth.currentUser;
 };

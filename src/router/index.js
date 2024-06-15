@@ -43,12 +43,111 @@ const routes = [
   },
   {
     meta: {
+      title: "Autores",
+      requiresAuth: true,
+    },
+    path: "/authors",
+    name: "authors",
+    component: () => import("@/views/AuthorView.vue"),
+  },
+  {
+    meta: {
+      title: "Editoriales",
+      requiresAuth: true,
+    },
+    path: "/publishers",
+    name: "publishers",
+    component: () => import("@/views/PublishersView.vue"),
+  },
+  {
+    meta: {
+      title: "Lenguajes",
+      requiresAuth: true,
+    },
+    path: "/languages",
+    name: "languages",
+    component: () => import("@/views/LanguagesView.vue"),
+  },
+  {
+    meta: {
+      title: "Solicitudes",
+      requiresAuth: true,
+    },
+    path: "/requests",
+    name: "requests",
+    component: () => import("@/views/RequestsView.vue"),
+  },
+  {
+    meta: {
+      title: "Solicitudes pendientes",
+      requiresAuth: true,
+    },
+    path: "/requestsAdmin",
+    name: "requestsAdmin",
+    component: () => import("@/views/AdminRequestView.vue"),
+  },
+  {
+    meta: {
       title: "Forms",
       requiresAuth: true,
     },
     path: "/forms",
     name: "forms",
     component: () => import("@/views/FormsView.vue"),
+  },
+  {
+    meta: {
+      title: "Nuevo Autor",
+      requiresAuth: true,
+    },
+    path: "/authorForm",
+    name: "authorForm",
+    component: () => import("@/views/AuthorForm.vue"),
+  },
+  {
+    meta: {
+      title: "Nuevo Lenguaje",
+      requiresAuth: true,
+    },
+    path: "/languageForm",
+    name: "languageForm",
+    component: () => import("@/views/LanguageForm.vue"),
+  },
+  {
+    meta: {
+      title: "Nueva Editorial",
+      requiresAuth: true,
+    },
+    path: "/publisherForm",
+    name: "publisherForm",
+    component: () => import("@/views/PublisherForm.vue"),
+  },
+  {
+    meta: {
+      title: "Nueva Categoria",
+      requiresAuth: true,
+    },
+    path: "/categoryForm",
+    name: "categoryForm",
+    component: () => import("@/views/CategoryForm.vue"),
+  },
+  {
+    meta: {
+      title: "Nueva Solicitud",
+      requiresAuth: true,
+    },
+    path: "/requestForm",
+    name: "requestForm",
+    component: () => import("@/views/RequestForm.vue"),
+  },
+  {
+    meta: {
+      title: "Nuevo Libro",
+      requiresAuth: true,
+    },
+    path: "/newBook",
+    name: "newBook",
+    component: () => import("@/views/BookForm.vue"),
   },
   {
     meta: {
@@ -76,14 +175,6 @@ const routes = [
     path: "/responsive",
     name: "responsive",
     component: () => import("@/views/ResponsiveView.vue"),
-  },
-  {
-    meta: {
-      title: "Login",
-    },
-    path: "/login",
-    name: "login",
-    component: () => import("@/views/LoginView.vue"),
   },
   {
     meta: {

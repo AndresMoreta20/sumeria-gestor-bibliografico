@@ -1,7 +1,18 @@
+<template>
+  <div id="app">
+    <AppLayout>
+      <router-view v-if="isAuthenticated" />
+      <div v-else>
+        <router-link to="/login">Login</router-link>
+      </div>
+    </AppLayout>
+  </div>
+</template>
+
 <script setup>
-import { RouterView } from 'vue-router'
+import { isAuthenticated } from "@/auth.js";
 </script>
 
-<template>
-  <RouterView />
-</template>
+<style>
+/* Your styles here */
+</style>

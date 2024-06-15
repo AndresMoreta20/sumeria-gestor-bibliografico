@@ -60,12 +60,12 @@ const transactionBarItems = computed(() => mainStore.history)
         />
       </SectionTitleLineWithButton> -->
 
-      <div class="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-6">
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-4 mb-6">
         <CardBoxWidget
          
           color="text-grey-500"
           :icon="mdiNotebook"
-          :number="512"
+          :number="0"
           label="Total de solicitudes"
         />
         <CardBoxWidget
@@ -73,7 +73,7 @@ const transactionBarItems = computed(() => mainStore.history)
           
           color="text-blue-500"
           :icon="mdiBookOpenPageVariant"
-          :number="777"
+          :number="0"
           label="Solicitudes pendientes"
         />
         <CardBoxWidget

@@ -1,5 +1,5 @@
-import { mdiBook } from "@mdi/js";
 import {
+  mdiBook,
   mdiAccountCircle,
   mdiMonitor,
   mdiGithub,
@@ -18,9 +18,14 @@ import {
   mdiAccount,
   mdiStore,
   mdiTranslate,
+  mdiPencilMinus,
 } from "@mdi/js";
+import { useMainStore } from "@/stores/main.js";
 
-export default [
+const mainStore = useMainStore();
+const userRole = mainStore.userRole;
+
+const adminMenu = [
   {
     to: "/dashboard",
     icon: mdiSpeedometer,
@@ -37,78 +42,33 @@ export default [
     icon: mdiHeart,
   },
   {
-    to: "/categories",
+    to: "/authors",
     label: "Autores",
     icon: mdiAccount,
   },
   {
-    to: "/categories",
+    to: "/publishers",
     label: "Editoriales",
     icon: mdiStore,
   },
   {
-    to: "/categories",
+    to: "/languages",
     label: "Lenguajes",
     icon: mdiTranslate,
   },
-
-  // {
-  //   to: "/forms",
-  //   label: "Forms",
-  //   icon: mdiSquareEditOutline,
-  // },
-  // {
-  //   to: "/ui",
-  //   label: "UI",
-  //   icon: mdiTelevisionGuide,
-  // },
-  // {
-  //   to: "/responsive",
-  //   label: "Responsive",
-  //   icon: mdiResponsive,
-  // },
-  // {
-  //   to: "/",
-  //   label: "Styles",
-  //   icon: mdiPalette,
-  // /},
-  // {
-  //   to: "/profile",
-  //   label: "Perfil",
-  //   icon: mdiAccountCircle,
-  // },
-  // {
-  //   to: "/login",
-  //   label: "Login",
-  //   icon: mdiLock,
-  // },
-  // {
-  //   to: "/error",
-  //   label: "Error",
-  //   icon: mdiAlertCircle,
-  // },
-  // {
-  //   label: "Dropdown",
-  //   icon: mdiViewList,
-  //   menu: [
-  //     {
-  //       label: "Item One",
-  //     },
-  //     {
-  //       label: "Item Two",
-  //     },
-  //   ],
-  // },
-  // {
-  //   href: "https://github.com/justboil/admin-one-vue-tailwind",
-  //   label: "GitHub",
-  //   icon: mdiGithub,
-  //   target: "_blank",
-  // },
-  // {
-  //   href: "https://github.com/justboil/admin-one-react-tailwind",
-  //   label: "React version",
-  //   icon: mdiReact,
-  //   target: "_blank",
-  // },
+  {
+    to: "/requestsAdmin",
+    label: "Solicitudes",
+    icon: mdiPencilMinus,
+  },
 ];
+
+const publisherMenu = [
+  {
+    to: "/requests",
+    label: "Solicitudes",
+    icon: mdiPencilMinus,
+  },
+];
+
+export default userRole === "admin" ? adminMenu : publisherMenu;

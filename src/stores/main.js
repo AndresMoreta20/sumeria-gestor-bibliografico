@@ -7,6 +7,7 @@ export const useMainStore = defineStore("main", () => {
   const userName = ref("admin");
   const userEmail = ref("");
   const userToken = ref(sessionStorage.getItem("user-token") || "");
+  const userRole = ref(sessionStorage.getItem("user-role") || "");
 
   const userAvatar = computed(
     () =>
@@ -31,13 +32,30 @@ export const useMainStore = defineStore("main", () => {
       userToken.value = payload.token;
       sessionStorage.setItem("user-token", payload.token);
     }
+    if (payload.role) {
+      userRole.value = payload.role;
+      sessionStorage.setItem("user-role", payload.role);
+      // Set the userName based on the role
+      userName.value = payload.role === "publisher" ? "editorial" : "admin";
+    }
+  }
+
+  function resetUser() {
+    userName.value = "";
+    userEmail.value = "";
+    userToken.value = "";
+    userRole.value = "";
+    sessionStorage.removeItem("user-token");
+    sessionStorage.removeItem("user-email");
+    sessionStorage.removeItem("user-role");
   }
 
   async function handleLogin(email, password) {
     try {
       const response = await login(email, password);
       if (response.success) {
-        setUser({ email: response.email, token: response.token });
+        const role = response.isFirebase ? "publisher" : "admin";
+        setUser({ email: response.email, token: response.token, role });
         console.log("User email set in store:", response.email);
       } else {
         console.error("Credenciales incorrectas:", response.message);
@@ -52,11 +70,13 @@ export const useMainStore = defineStore("main", () => {
     userName,
     userEmail,
     userToken,
+    userRole,
     userAvatar,
     isFieldFocusRegistered,
     clients,
     history,
     setUser,
+    resetUser,
     handleLogin,
   };
 });

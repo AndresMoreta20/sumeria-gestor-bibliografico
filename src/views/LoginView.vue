@@ -1,10 +1,9 @@
 <script setup>
-import { reactive } from "vue";
+import { reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { mdiAccount, mdiAsterisk } from "@mdi/js";
 import SectionFullScreen from "@/components/SectionFullScreen.vue";
 import CardBox from "@/components/CardBox.vue";
-import FormCheckRadio from "@/components/FormCheckRadio.vue";
 import FormField from "@/components/FormField.vue";
 import FormControl from "@/components/FormControl.vue";
 import BaseButton from "@/components/BaseButton.vue";
@@ -20,6 +19,7 @@ const form = reactive({
 
 const router = useRouter();
 const mainStore = useMainStore();
+const errorMessage = ref("");
 
 const submit = async () => {
   try {
@@ -27,6 +27,7 @@ const submit = async () => {
     router.push("/dashboard");
   } catch (error) {
     console.error("Error durante el login:", error);
+    errorMessage.value = error.message || "Login failed";
   }
 };
 </script>
@@ -44,8 +45,6 @@ const submit = async () => {
           <FormField label="Password" help="Contraseña">
             <FormControl v-model="form.pass" :icon="mdiAsterisk" type="password" name="password" autocomplete="current-password" />
           </FormField>
-
-          <!-- <FormCheckRadio v-model="form.remember" name="remember" label="Remember" :input-value="true" /> -->
 
           <template #footer>
             <BaseButtons>

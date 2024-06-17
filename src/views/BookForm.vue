@@ -38,52 +38,38 @@ const form = reactive({
 
 const loading = ref(false);
 
-const generateSKU = async () => {
-  const date = new Date();
-  const timestamp = date.getTime();
+const generateSKU = () => {
+  const timestamp = new Date().getTime();
   return `SKU${timestamp}`;
+};
+
+const uploadFile = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('name', file.name);
+  const response = await axios.post('https://cindyl23.sg-host.com/wp-json/wp/v2/media', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+      'Authorization': `Basic ${btoa(`${consumerKey}:${consumerSecret}`)}`
+    }
+  });
+  return response.data.source_url;
 };
 
 const submit = async () => {
   loading.value = true;
   try {
+    form.sku = generateSKU();
+
     let imageUrl = form.imageUrl;
     let fileUrl = '';
 
-    // Generate a unique SKU
-    const sku = await generateSKU();
-    form.sku = sku;
-
-    // Upload the image file if provided
     if (form.imageFile) {
-      const formData = new FormData();
-      formData.append('file', form.imageFile);
-      formData.append('name', form.imageFile.name);
-
-      const uploadResponse = await axios.post('https://cindyl23.sg-host.com/wp-json/wp/v2/media', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': `Basic ${btoa(`${consumerKey}:${consumerSecret}`)}`
-        }
-      });
-
-      imageUrl = uploadResponse.data.source_url;
+      imageUrl = await uploadFile(form.imageFile);
     }
 
-    // Upload the book file if provided
     if (form.file) {
-      const fileData = new FormData();
-      fileData.append('file', form.file);
-      fileData.append('name', form.file.name);
-
-      const uploadResponse = await axios.post('https://cindyl23.sg-host.com/wp-json/wp/v2/media', fileData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': `Basic ${btoa(`${consumerKey}:${consumerSecret}`)}`
-        }
-      });
-
-      fileUrl = uploadResponse.data.source_url;
+      fileUrl = await uploadFile(form.file);
     }
 
     const data = {
@@ -99,68 +85,16 @@ const submit = async () => {
       categories: form.category ? [{ id: form.category }] : [{ id: 190 }, { id: 205 }],
       images: [{ src: imageUrl || 'https://i0.wp.com/cindyl23.sg-host.com/wp-content/uploads/2024/06/Frankenstein.webp?fit=220%2C360&ssl=1' }],
       attributes: [
-        {
-          id: 1,
-          name: 'Autor',
-          position: 0,
-          visible: true,
-          variation: false,
-          options: [form.author || 'Mary Wollstonecraft Shelley']
-        },
-        {
-          id: 3,
-          name: 'ISBN',
-          position: 1,
-          visible: true,
-          variation: false,
-          options: [form.isbn || '9788498450569']
-        },
-        {
-          id: 4,
-          name: 'Editorial',
-          position: 2,
-          visible: true,
-          variation: false,
-          options: [form.publisher || 'ALGAR EDITORIAL']
-        },
-        {
-          id: 2,
-          name: 'Formato',
-          position: 3,
-          visible: true,
-          variation: false,
-          options: [form.format || 'E-book']
-        },
-        {
-          id: 7,
-          name: 'Idioma',
-          position: 4,
-          visible: true,
-          variation: false,
-          options: [form.language || 'Español']
-        },
-        {
-          id: 6,
-          name: 'Encuadernación',
-          position: 5,
-          visible: true,
-          variation: false,
-          options: ['Tapa blanda']
-        },
-        {
-          id: 5,
-          name: 'Estado',
-          position: 6,
-          visible: true,
-          variation: false,
-          options: ['Nuevo']
-        }
+        { id: 1, name: 'Autor', options: [form.author || 'Mary Wollstonecraft Shelley'] },
+        { id: 3, name: 'ISBN', options: [form.isbn || '9788498450569'] },
+        { id: 4, name: 'Editorial', options: [form.publisher || 'ALGAR EDITORIAL'] },
+        { id: 2, name: 'Formato', options: [form.format || 'E-book'] },
+        { id: 7, name: 'Idioma', options: [form.language || 'Español'] },
+        { id: 6, name: 'Encuadernación', options: ['Tapa blanda'] },
+        { id: 5, name: 'Estado', options: ['Nuevo'] }
       ],
       downloads: [
-        {
-          name: 'Frankenstein Digital',
-          file: fileUrl || 'https://cindyl23.sg-host.com/wp-content/uploads/woocommerce_uploads/2024/06/Frankenstein-o-el-moderno-Prometeo-libro-9qxjrx.pdf'
-        }
+        { name: 'Frankenstein Digital', file: fileUrl || 'https://cindyl23.sg-host.com/wp-content/uploads/woocommerce_uploads/2024/06/Frankenstein-o-el-moderno-Prometeo-libro-9qxjrx.pdf' }
       ]
     };
 
@@ -190,8 +124,7 @@ const cancel = () => {
 <template>
   <LayoutAuthenticated>
     <SectionMain>
-      <SectionTitleLineWithButton :icon="mdiBallotOutline" title="Add New Book" main>
-      </SectionTitleLineWithButton>
+      <SectionTitleLineWithButton :icon="mdiBallotOutline" title="Add New Book" main />
       <CardBox form @submit.prevent="submit">
         <FormField label="Cover">
           <FormControl v-model="form.imageUrl" type="text" placeholder="Image URL (or upload a file)" />

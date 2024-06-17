@@ -10,7 +10,7 @@
 </template>
 
 <script setup>
-import { isAuthenticated } from "@/auth.js";
+import { isAuthenticated } from "@/services/auth.js";
 </script>
 
 <style>

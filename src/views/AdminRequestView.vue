@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
-import { db } from '@/firebase'; // Ensure this points to your Firebase configuration file
+import { db } from '@/firebase'; 
 import axios from 'axios';
 import { mdiBook } from '@mdi/js';
 import SectionMain from '@/components/SectionMain.vue';
@@ -88,7 +88,7 @@ onMounted(fetchRequests);
       
       <CardBox class="mb-6" has-table>
         <div v-if="loading" class="flex items-center justify-center p-4">
-          <div class="loader"></div>
+          <div class="loader border-4 border-gray-200 border-t-4 border-t-blue-500 rounded-full w-5 h-5 animate-spin"></div>
         </div>
         <div v-else>
           <table class="table-auto w-full">
@@ -111,7 +111,7 @@ onMounted(fetchRequests);
                     class="bg-green-500 text-white px-4 py-2 rounded"
                     :disabled="loadingStates[request.id]"
                   >
-                    <span v-if="loadingStates[request.id]" class="loader"></span>
+                    <span v-if="loadingStates[request.id]" class="loader border-4 border-gray-200 border-t-4 border-t-blue-500 rounded-full w-5 h-5 animate-spin"></span>
                     <span v-else>Approve</span>
                   </button>
                 </td>
@@ -123,21 +123,3 @@ onMounted(fetchRequests);
     </SectionMain>
   </LayoutAuthenticated>
 </template>
-
-<style scoped>
-.loader {
-  border: 4px solid #f3f3f3; /* Light grey */
-  border-top: 4px solid #3498db; /* Blue */
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  animation: spin 2s linear infinite;
-  display: inline-block;
-  margin-right: 5px;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-</style>

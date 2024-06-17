@@ -37,16 +37,16 @@ const saveAuthor = async () => {
 <template>
   <LayoutAuthenticated>
     <SectionMain>
-      <SectionTitleLineWithButton :icon="mdiAccountPlus" title="Add New Author" main>
+      <SectionTitleLineWithButton :icon="mdiAccountPlus" title="Nuevo autor" main>
       </SectionTitleLineWithButton>
       
       <CardBox form @submit.prevent="saveAuthor">
-        <FormField label="Author Name">
-          <FormControl v-model="form.name" placeholder="Enter author name" />
+        <FormField label="Nombre">
+          <FormControl v-model="form.name" placeholder="Ingresa el nombre" />
         </FormField>
 
-        <FormField label="Description">
-          <FormControl v-model="form.description" type="textarea" placeholder="Enter description" />
+        <FormField label="Biografia">
+          <FormControl v-model="form.description" type="textarea" placeholder="Biografia" />
         </FormField>
 
         <template #footer>

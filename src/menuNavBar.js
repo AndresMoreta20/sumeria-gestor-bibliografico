@@ -12,7 +12,7 @@ import {
   mdiReact,
   mdiKey,
 } from "@mdi/js";
-import { logout } from "@/auth.js";
+import { logout } from "@/services/auth.js";
 
 export default [
   {

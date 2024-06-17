@@ -7,7 +7,7 @@ import BaseIcon from '@/components/BaseIcon.vue'
 import UserAvatarCurrentUser from '@/components/UserAvatarCurrentUser.vue'
 import NavBarMenuList from '@/components/NavBarMenuList.vue'
 import BaseDivider from '@/components/BaseDivider.vue'
-import { logout } from '@/auth.js' // Asegúrate de ajustar la ruta según sea necesario
+import { logout } from '@/services/auth.js' // Asegúrate de ajustar la ruta según sea necesario
 
 const props = defineProps({
   item: {

@@ -1,6 +1,6 @@
 import axios from "axios";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "./firebase";
+import { auth } from "../firebase";
 import { useMainStore } from "@/stores/main.js";
 
 const API_URL = "https://cindyl23.sg-host.com/?rest_route=/simple-jwt-login/v1";

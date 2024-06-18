@@ -12,13 +12,9 @@ app.use(router).use(pinia).mount("#app");
 
 const mainStore = useMainStore(pinia);
 
-// Fetch sample data if those methods exist
-if (typeof mainStore.fetchSampleClients === "function") {
-  mainStore.fetchSampleClients();
-}
-if (typeof mainStore.fetchSampleHistory === "function") {
-  mainStore.fetchSampleHistory();
-}
+// Fetch sample data
+mainStore.fetchSampleClients();
+mainStore.fetchSampleHistory();
 
 const defaultDocumentTitle = "Sumeria Gestor Bibliográfico";
 
@@ -30,8 +26,7 @@ router.afterEach((to) => {
 
 router.beforeEach((to, from, next) => {
   if (to.matched.some((record) => record.meta.requiresAuth)) {
-    if (!mainStore.userToken) {
-      // Ensure this check aligns with your store's authentication logic
+    if (!mainStore.isAuthenticated) {
       next({
         path: "/login",
         query: { redirect: to.fullPath },

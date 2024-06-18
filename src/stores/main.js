@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
+import axios from "axios";
 import { login } from "@/services/auth.js";
 
 export const useMainStore = defineStore("main", () => {
@@ -8,12 +9,13 @@ export const useMainStore = defineStore("main", () => {
   const userToken = ref(sessionStorage.getItem("user-token") || "");
   const userRole = ref(sessionStorage.getItem("user-role") || "");
 
-  const userAvatar = computed(() => {
-    return `https://api.dicebear.com/7.x/avataaars/svg?seed=${userEmail.value.replace(
-      /[^a-z0-9]+/gi,
-      "-"
-    )}`;
-  });
+  const userAvatar = computed(
+    () =>
+      `https://api.dicebear.com/7.x/avataaars/svg?seed=${userEmail.value.replace(
+        /[^a-z0-9]+/gi,
+        "-"
+      )}`
+  );
 
   const isFieldFocusRegistered = ref(false);
   const clients = ref([]);
@@ -44,6 +46,7 @@ export const useMainStore = defineStore("main", () => {
     userToken.value = "";
     userRole.value = "";
     sessionStorage.removeItem("user-token");
+    sessionStorage.removeItem("user-email");
     sessionStorage.removeItem("user-role");
   }
 

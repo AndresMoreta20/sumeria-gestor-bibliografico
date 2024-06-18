@@ -27,6 +27,9 @@ const userRole = mainStore.userRole;
 
 const adminMenu = [
   {
+    header: "Administrador",
+  },
+  {
     to: "/dashboard",
     icon: mdiSpeedometer,
     label: "Dashboard",
@@ -57,8 +60,16 @@ const adminMenu = [
     icon: mdiTranslate,
   },
   {
+    header: "Solicitudes",
+  },
+  {
     to: "/requestsAdmin",
-    label: "Solicitudes",
+    label: "Libros",
+    icon: mdiPencilMinus,
+  },
+  {
+    to: "/publisher-requests",
+    label: "Editoriales",
     icon: mdiPencilMinus,
   },
 ];

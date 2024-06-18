@@ -1,6 +1,6 @@
 <script setup>
-import { computed, ref, onMounted } from 'vue'
-import { useMainStore } from '@/stores/main'
+import { computed, ref, onMounted } from "vue";
+import { useMainStore } from "@/stores/main";
 import {
   mdiBookOpenPageVariant,
   mdiCartOutline,
@@ -9,40 +9,40 @@ import {
   mdiReload,
   mdiGithub,
   mdiChartPie,
-  mdiAccountMultiple
-} from '@mdi/js'
-import * as chartConfig from '@/components/Charts/chart.config.js'
-import LineChart from '@/components/Charts/LineChart.vue'
-import SectionMain from '@/components/SectionMain.vue'
-import CardBoxWidget from '@/components/CardBoxWidget.vue'
-import CardBox from '@/components/CardBox.vue'
-import TableSampleClients from '@/components/TableSampleClients.vue'
-import NotificationBar from '@/components/NotificationBar.vue'
-import BaseButton from '@/components/BaseButton.vue'
-import CardBoxTransaction from '@/components/CardBoxTransaction.vue'
-import CardBoxClient from '@/components/CardBoxClient.vue'
-import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
-import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.vue'
-import SectionBannerStarOnGitHub from '@/components/SectionBannerStarOnGitHub.vue'
-import { mdiCheck } from '@mdi/js'
-import { mdiNotebook } from '@mdi/js'
-import { mdiClose } from '@mdi/js'
+  mdiAccountMultiple,
+} from "@mdi/js";
+import * as chartConfig from "@/components/Charts/chart.config.js";
+import LineChart from "@/components/Charts/LineChart.vue";
+import SectionMain from "@/components/SectionMain.vue";
+import CardBoxWidget from "@/components/CardBoxWidget.vue";
+import CardBox from "@/components/CardBox.vue";
+import TableSampleClients from "@/components/TableSampleClients.vue";
+import NotificationBar from "@/components/NotificationBar.vue";
+import BaseButton from "@/components/BaseButton.vue";
+import CardBoxTransaction from "@/components/CardBoxTransaction.vue";
+import CardBoxClient from "@/components/CardBoxClient.vue";
+import LayoutAuthenticated from "@/layouts/LayoutAuthenticated.vue";
+import SectionTitleLineWithButton from "@/components/SectionTitleLineWithButton.vue";
+import SectionBannerStarOnGitHub from "@/components/SectionBannerStarOnGitHub.vue";
+import { mdiCheck } from "@mdi/js";
+import { mdiNotebook } from "@mdi/js";
+import { mdiClose } from "@mdi/js";
 
-const chartData = ref(null)
+const chartData = ref(null);
 
 const fillChartData = () => {
-  chartData.value = chartConfig.sampleChartData()
-}
+  chartData.value = chartConfig.sampleChartData();
+};
 
 onMounted(() => {
-  fillChartData()
-})
+  fillChartData();
+});
 
-const mainStore = useMainStore()
+const mainStore = useMainStore();
 
-const clientBarItems = computed(() => mainStore.clients.slice(0, 4))
+const clientBarItems = computed(() => mainStore.clients.slice(0, 4));
 
-const transactionBarItems = computed(() => mainStore.history)
+const transactionBarItems = computed(() => mainStore.history);
 </script>
 
 <template>
@@ -62,22 +62,18 @@ const transactionBarItems = computed(() => mainStore.history)
 
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-4 mb-6">
         <CardBoxWidget
-         
           color="text-grey-500"
           :icon="mdiNotebook"
           :number="0"
           label="Total de solicitudes"
         />
         <CardBoxWidget
-
-          
           color="text-blue-500"
           :icon="mdiBookOpenPageVariant"
           :number="0"
           label="Solicitudes pendientes"
         />
         <CardBoxWidget
-        
           color="text-green-500"
           :icon="mdiCheck"
           :number="0"
@@ -85,7 +81,6 @@ const transactionBarItems = computed(() => mainStore.history)
           label="Solicitudes aprobadas"
         />
         <CardBoxWidget
-        
           color="text-red-500"
           :icon="mdiClose"
           :number="0"
@@ -93,7 +88,7 @@ const transactionBarItems = computed(() => mainStore.history)
           label="Solicitudes rechazadas"
         />
       </div>
-<!-- 
+      <!-- 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div class="flex flex-col justify-between">
           <CardBoxTransaction

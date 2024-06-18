@@ -17,77 +17,179 @@ const createRoute = (
   return route;
 };
 
-export default [
+const routeDefinitions = [
   {
-    path: "/",
-    redirect: "/login",
+    path: "/login",
+    name: "login",
+    componentPath: "LoginView",
+    requiresAuth: false,
+    title: "Login",
   },
-  createRoute("/login", "login", "LoginView", false, "Login"),
-  createRoute("/dashboard", "dashboard", "HomeView", true, "Dashboard"),
-  createRoute("/books", "books", "BooksView", true, "Libros"),
-  createRoute(
-    "/categories",
-    "categories",
-    "CategoriesView",
-    true,
-    "Categorias"
+  {
+    path: "/dashboard",
+    name: "dashboard",
+    componentPath: "HomeView",
+    requiresAuth: true,
+    title: "Dashboard",
+  },
+  {
+    path: "/books",
+    name: "books",
+    componentPath: "BooksView",
+    requiresAuth: true,
+    title: "Libros",
+  },
+  {
+    path: "/categories",
+    name: "categories",
+    componentPath: "CategoriesView",
+    requiresAuth: true,
+    title: "Categorias",
+  },
+  {
+    path: "/authors",
+    name: "authors",
+    componentPath: "AuthorView",
+    requiresAuth: true,
+    title: "Autores",
+  },
+  {
+    path: "/publishers",
+    name: "publishers",
+    componentPath: "PublishersView",
+    requiresAuth: true,
+    title: "Editoriales",
+  },
+  {
+    path: "/publisher-form",
+    name: "newPublisher",
+    componentPath: "PublisherRequestForm",
+    // requiresAuth: true,
+    title: "Editorial",
+  },
+  {
+    path: "/languages",
+    name: "languages",
+    componentPath: "LanguagesView",
+    requiresAuth: true,
+    title: "Lenguajes",
+  },
+  {
+    path: "/requests",
+    name: "requests",
+    componentPath: "RequestsView",
+    requiresAuth: true,
+    title: "Solicitudes",
+  },
+  {
+    path: "/requestsAdmin",
+    name: "requestsAdmin",
+    componentPath: "AdminRequestView",
+    requiresAuth: true,
+    title: "Solicitudes pendientes",
+  },
+  {
+    path: "/publisher-requests",
+    name: "publisherRequests",
+    componentPath: "PublisherRequestsView",
+    requiresAuth: true,
+    title: "Solicitudes pendientes",
+  },
+  {
+    path: "/publisher-check/:id",
+    name: "PublisherCheckView",
+    componentPath: "PublisherCheckView",
+    requiresAuth: true,
+    title: "Nueva editorial",
+  },
+  {
+    path: "/forms",
+    name: "forms",
+    componentPath: "FormsView",
+    requiresAuth: true,
+    title: "Forms",
+  },
+  {
+    path: "/authorForm",
+    name: "authorForm",
+    componentPath: "AuthorForm",
+    requiresAuth: true,
+    title: "Nuevo Autor",
+  },
+  {
+    path: "/languageForm",
+    name: "languageForm",
+    componentPath: "LanguageForm",
+    requiresAuth: true,
+    title: "Nuevo Lenguaje",
+  },
+  {
+    path: "/publisherForm",
+    name: "publisherForm",
+    componentPath: "PublisherForm",
+    requiresAuth: true,
+    title: "Nueva Editorial",
+  },
+  {
+    path: "/categoryForm",
+    name: "categoryForm",
+    componentPath: "CategoryForm",
+    requiresAuth: true,
+    title: "Nueva Categoria",
+  },
+  {
+    path: "/requestForm",
+    name: "requestForm",
+    componentPath: "RequestForm",
+    requiresAuth: true,
+    title: "Nueva Solicitud",
+  },
+  {
+    path: "/newBook",
+    name: "newBook",
+    componentPath: "BookForm",
+    requiresAuth: true,
+    title: "Nuevo Libro",
+  },
+  {
+    path: "/profile",
+    name: "profile",
+    componentPath: "ProfileView",
+    requiresAuth: true,
+    title: "Profile",
+  },
+  {
+    path: "/ui",
+    name: "ui",
+    componentPath: "UiView",
+    requiresAuth: true,
+    title: "Ui",
+  },
+  {
+    path: "/responsive",
+    name: "responsive",
+    componentPath: "ResponsiveView",
+    requiresAuth: true,
+    title: "Responsive layout",
+  },
+  {
+    path: "/error",
+    name: "error",
+    componentPath: "ErrorView",
+    requiresAuth: false,
+    title: "Error",
+  },
+];
+
+export default [
+  { path: "/", redirect: "/login" },
+  ...routeDefinitions.map((route) =>
+    createRoute(
+      route.path,
+      route.name,
+      route.componentPath,
+      route.requiresAuth,
+      route.title
+    )
   ),
-  createRoute("/authors", "authors", "AuthorView", true, "Autores"),
-  createRoute(
-    "/publishers",
-    "publishers",
-    "PublishersView",
-    true,
-    "Editoriales"
-  ),
-  createRoute("/languages", "languages", "LanguagesView", true, "Lenguajes"),
-  createRoute("/requests", "requests", "RequestsView", true, "Solicitudes"),
-  createRoute(
-    "/requestsAdmin",
-    "requestsAdmin",
-    "AdminRequestView",
-    true,
-    "Solicitudes pendientes"
-  ),
-  createRoute("/forms", "forms", "FormsView", true, "Forms"),
-  createRoute("/authorForm", "authorForm", "AuthorForm", true, "Nuevo Autor"),
-  createRoute(
-    "/languageForm",
-    "languageForm",
-    "LanguageForm",
-    true,
-    "Nuevo Lenguaje"
-  ),
-  createRoute(
-    "/publisherForm",
-    "publisherForm",
-    "PublisherForm",
-    true,
-    "Nueva Editorial"
-  ),
-  createRoute(
-    "/categoryForm",
-    "categoryForm",
-    "CategoryForm",
-    true,
-    "Nueva Categoria"
-  ),
-  createRoute(
-    "/requestForm",
-    "requestForm",
-    "RequestForm",
-    true,
-    "Nueva Solicitud"
-  ),
-  createRoute("/newBook", "newBook", "BookForm", true, "Nuevo Libro"),
-  createRoute("/profile", "profile", "ProfileView", true, "Profile"),
-  createRoute("/ui", "ui", "UiView", true, "Ui"),
-  createRoute(
-    "/responsive",
-    "responsive",
-    "ResponsiveView",
-    true,
-    "Responsive layout"
-  ),
-  createRoute("/error", "error", "ErrorView", false, "Error"),
 ];

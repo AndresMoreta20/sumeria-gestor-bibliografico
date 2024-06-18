@@ -9,14 +9,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@emailjs/browser": "^4.3.3",
     "@mdi/js": "^7.4.47",
     "axios": "^1.7.2",
     "chart.js": "^4.4.3",
     "dotenv": "^16.4.5",
+    "emailjs-com": "^3.2.0",
     "firebase": "^10.12.2",
     "numeral": "^2.0.6",
     "pinia": "^2.1.7",
     "vue": "^3.4.21",
+    "vue-email": "^0.8.11",
     "vue-router": "4"
   },
   "devDependencies": {

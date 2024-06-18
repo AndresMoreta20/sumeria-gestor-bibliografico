@@ -12,8 +12,8 @@ import LayoutGuest from "@/layouts/LayoutGuest.vue";
 import { useMainStore } from "@/stores/main.js";
 
 const form = reactive({
-  login: "",
-  pass: "",
+  login: "kevin.cardenas-1@hotmail.com",
+  pass: "admin",
   remember: true,
 });
 
@@ -41,7 +41,7 @@ const submit = async () => {
         <CardBox
           :class="`w-full lg:w-1/2 ${cardClass}`"
           is-form
-          @submit.prevent="submit" 
+          @submit.prevent="submit"
         >
           <img
             src="@/assets/sumeria_logo.png"
@@ -80,7 +80,7 @@ const submit = async () => {
               {{ errorMessage }}
             </p>
             <p class="mt-4 text-center">
-              ¿Quieres publicar con nosotros?
+              Quieres publicar con nosotros?
               <router-link to="/publisher-form" class="text-blue-500"
                 >Haz clic aquí</router-link
               >

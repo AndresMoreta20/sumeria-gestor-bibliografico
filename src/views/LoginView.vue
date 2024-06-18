@@ -89,7 +89,7 @@ const submit = async () => {
         </CardBox>
         <div class="w-full lg:w-1/2 text-center p-6">
           <img
-            src="@/assets/sumeria_promo_Image.png"
+            src="@/assets/sumeria_promo_image.png"
             alt="Business Logo"
             class="w-84 mx-auto my-4"
           />

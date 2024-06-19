@@ -7,11 +7,13 @@ import LayoutAuthenticated from "@/layouts/LayoutAuthenticated.vue";
 import SectionTitleLineWithButton from "@/components/SectionTitleLineWithButton.vue";
 import CardBox from "@/components/CardBox.vue";
 import TableBooks from "@/components/TableBooks.vue";
+import BookDetail from "@/components/BookDetail.vue";
 
 const consumerKey = import.meta.env.VITE_APP_CONSUMER_KEY;
 const consumerSecret = import.meta.env.VITE_APP_CONSUMER_SECRET;
 
 const books = ref([]);
+const selectedBookId = ref(null); // Nuevo estado para el ID del libro seleccionado
 
 const fetchBooks = async () => {
   try {
@@ -30,6 +32,16 @@ const fetchBooks = async () => {
   }
 };
 
+// Mostrar el detalle del libro
+const viewBook = (bookId) => {
+  selectedBookId.value = bookId;
+};
+
+// Cerrar la vista de detalle del libro y regresar a la tabla
+const closeDetailView = () => {
+  selectedBookId.value = null;
+};
+
 onMounted(fetchBooks);
 </script>
 
@@ -41,7 +53,12 @@ onMounted(fetchBooks);
       </SectionTitleLineWithButton>
 
       <CardBox class="mb-6" has-table>
-        <TableBooks :books="books" />
+        <template v-if="selectedBookId">
+          <BookDetail :book-id="selectedBookId" @close="closeDetailView" />
+        </template>
+        <template v-else>
+          <TableBooks :books="books" @view-book="viewBook" />
+        </template>
       </CardBox>
     </SectionMain>
   </LayoutAuthenticated>

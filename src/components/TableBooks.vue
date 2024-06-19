@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
+import FormCheckRadio from "@/components/FormCheckRadio.vue"; // Asegúrate de importar tu componente correctamente
 
 const router = useRouter();
 
@@ -12,12 +13,15 @@ const props = defineProps({
   },
 });
 
+const emit = defineEmits(['view-book']); // Definir la emisión del evento
+
 const categories = ref([]);
 const selectedCategory = ref("all");
 const selectedFormat = ref("all");
+const showAvailable = ref(true); // Nuevo estado para mostrar disponibles o no disponibles
 const loading = ref(false);
 
-// Filtrar libros por categoría y formato
+// Filtrar libros por categoría, formato y disponibilidad
 const filteredBooks = computed(() => {
   let booksByCategory = props.books;
   if (selectedCategory.value !== "all") {
@@ -26,23 +30,23 @@ const filteredBooks = computed(() => {
     );
   }
 
-  if (selectedFormat.value === "all") {
-    return booksByCategory;
+  if (selectedFormat.value !== "all") {
+    booksByCategory = booksByCategory.filter((book) =>
+      selectedFormat.value === "physical" ? !book.virtual : book.virtual
+    );
   }
 
-  if (selectedFormat.value === "physical") {
-    return booksByCategory.filter((book) => !book.virtual);
-  }
-
-  if (selectedFormat.value === "digital") {
-    return booksByCategory.filter((book) => book.virtual);
-  }
-  return booksByCategory;
+  return booksByCategory.filter(book => book.status === (showAvailable.value ? "publish" : "private"));
 });
 
 // Navegar a la página de nuevo libro
 const goToNewBook = () => {
   router.push({ name: "newBook" });
+};
+
+// Navegar a la vista de detalles del libro
+const viewBook = (bookId) => {
+  emit('view-book', bookId); // Emitir el evento con el ID del libro
 };
 
 // Obtener categorías desde WooCommerce
@@ -65,15 +69,16 @@ const fetchCategories = async () => {
   }
 };
 
-// Eliminar libro
-const deleteBook = async (bookId) => {
+// Cambiar estado del libro a 'private' o 'publish'
+const toggleBookStatus = async (bookId, status) => {
   const consumerKey = import.meta.env.VITE_APP_CONSUMER_KEY;
   const consumerSecret = import.meta.env.VITE_APP_CONSUMER_SECRET;
   try {
-    if (confirm("¿Estás seguro de que quieres eliminar este libro?")) {
+    if (confirm(`¿Estás seguro de que quieres ${status === 'private' ? 'desactivar' : 'activar'} este libro?`)) {
       loading.value = true;
-      await axios.delete(
+      await axios.put(
         `https://cindyl23.sg-host.com/wp-json/wc/v3/products/${bookId}`,
+        { status },
         {
           auth: {
             username: consumerKey,
@@ -81,13 +86,13 @@ const deleteBook = async (bookId) => {
           },
         }
       );
-      alert("Libro eliminado con éxito");
+      alert(`Libro ${status === 'private' ? 'desactivado' : 'activado'} con éxito`);
       loading.value = false;
-      location.reload(); // Recargar la página después de la eliminación
+      location.reload(); // Recargar la página después de cambiar el estado
     }
   } catch (error) {
-    console.error("Error al eliminar el libro:", error.response?.data || error);
-    alert("Error al eliminar el libro");
+    console.error(`Error al ${status === 'private' ? 'desactivar' : 'activar'} el libro:`, error.response?.data || error);
+    alert(`Error al ${status === 'private' ? 'desactivar' : 'activar'} el libro`);
     loading.value = false;
   }
 };
@@ -117,6 +122,16 @@ onMounted(fetchCategories);
           {{ category.name }}
         </option>
       </select>
+    </div>
+    <div class="flex items-center">
+      <label class="mr-2">Disponibilidad:</label>
+      <FormCheckRadio
+        v-model="showAvailable"
+        name="availability-switch"
+        type="switch"
+        label="Disponibilidad"
+        :input-value="true"
+      />
     </div>
     <button @click="goToNewBook" class="bg-blue-500 text-white p-2 rounded">
       Nuevo Libro
@@ -154,14 +169,14 @@ onMounted(fetchCategories);
         }}
       </p>
       <div class="mt-auto flex justify-between w-full">
-        <button class="bg-gray-300 text-black py-2 px-4 rounded w-full mr-2">
-          Editar
+        <button @click="viewBook(book.id)" class="bg-gray-300 text-black py-2 px-4 rounded w-full mr-2">
+          Ver
         </button>
         <button
-          @click="deleteBook(book.id)"
+          @click="toggleBookStatus(book.id, book.status === 'publish' ? 'private' : 'publish')"
           class="bg-red-500 text-white py-2 px-4 rounded w-full"
         >
-          Eliminar
+          {{ book.status === 'publish' ? 'Desactivar' : 'Activar' }}
         </button>
       </div>
     </div>

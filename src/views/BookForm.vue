@@ -94,7 +94,7 @@ const submit = async () => {
         { id: 5, name: 'Estado', options: ['Nuevo'] }
       ],
       downloads: [
-        { name: 'Frankenstein Digital', file: fileUrl || 'https://cindyl23.sg-host.com/wp-content/uploads/woocommerce_uploads/2024/06/Frankenstein-o-el-moderno-Prometeo-libro-9qxjrx.pdf' }
+        { name: 'Frankenstein Digital', file: fileUrl || 'https://cindyl23.sg-host.com/wp-content/themes/bookworm/assets/img/FormatoAntiguo.epub' }
       ]
     };
 
@@ -107,7 +107,7 @@ const submit = async () => {
 
     console.log('Book created successfully:', response.data);
     alert('Book created successfully');
-    router.push('/books'); // Replace with the actual path you want to redirect to
+    router.push('/books'); 
   } catch (error) {
     console.error('Error creating book:', error.response?.data || error);
     alert('Error creating book');
@@ -117,7 +117,7 @@ const submit = async () => {
 };
 
 const cancel = () => {
-  router.push('/books'); // Replace with the actual path you want to go back to
+  router.push('/books'); 
 };
 </script>
 

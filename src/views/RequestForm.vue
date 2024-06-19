@@ -85,7 +85,7 @@ const submit = async () => {
     }
 
     const requestData = {
-      title: form.title || 'Frankenstein Prueba Admin',
+      title: form.title || 'Frankenstein',
       format: form.format || 'E-book',
       isbn: form.isbn || '9788498450569',
       category: form.category || '190',
@@ -97,7 +97,7 @@ const submit = async () => {
       shortDescription: form.shortDescription || 'En la novela, el Monstruo aparece como una criatura humanoide de enorme estatura.',
       description: form.description || 'En la novela, el Monstruo aparece como una criatura humanoide de enorme estatura.',
       imageUrl: imageUrl || 'https://i0.wp.com/cindyl23.sg-host.com/wp-content/uploads/2024/06/Frankenstein.webp?fit=220%2C360&ssl=1',
-      fileUrl: fileUrl || 'https://cindyl23.sg-host.com/wp-content/uploads/woocommerce_uploads/2024/06/Frankenstein-o-el-moderno-Prometeo-libro-9qxjrx.pdf',
+      fileUrl: fileUrl || 'https://cindyl23.sg-host.com/wp-content/themes/bookworm/assets/img/FormatoAntiguo.epub',
       stockQuantity: form.stockQuantity,
       sku: form.sku,
       status: 'pending'

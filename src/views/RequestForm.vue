@@ -114,7 +114,7 @@ const submit = async () => {
         userEmail: user.email
       });
       alert('Request submitted successfully');
-      router.push('/requests'); // Replace with the actual path you want to redirect to
+      router.push('/requests'); 
     } else {
       alert('You must be logged in to submit a request');
     }
@@ -127,7 +127,7 @@ const submit = async () => {
 };
 
 const cancel = () => {
-  router.push('/requests'); // Replace with the actual path you want to go back to
+  router.push('/requests');
 };
 </script>
 

@@ -12,9 +12,13 @@ app.use(router).use(pinia).mount("#app");
 
 const mainStore = useMainStore(pinia);
 
-// Fetch sample data
-mainStore.fetchSampleClients();
-mainStore.fetchSampleHistory();
+// Validar y fetch sample data si existen las funciones
+if (typeof mainStore.fetchSampleClients === "function") {
+  mainStore.fetchSampleClients();
+}
+if (typeof mainStore.fetchSampleHistory === "function") {
+  mainStore.fetchSampleHistory();
+}
 
 const defaultDocumentTitle = "Sumeria Gestor Bibliográfico";
 

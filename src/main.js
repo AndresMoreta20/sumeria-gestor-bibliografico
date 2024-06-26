@@ -12,7 +12,7 @@ app.use(router).use(pinia).mount("#app");
 
 const mainStore = useMainStore(pinia);
 
-// Validar y fetch sample data si existen las funciones
+// Fetch sample data if functions exist
 if (typeof mainStore.fetchSampleClients === "function") {
   mainStore.fetchSampleClients();
 }

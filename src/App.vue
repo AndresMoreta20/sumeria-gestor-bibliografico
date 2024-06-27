@@ -1,16 +1,15 @@
 <template>
   <div id="app">
-    <AppLayout>
-      <router-view v-if="isAuthenticated" />
-      <div v-else>
-        <router-link to="/login">Login</router-link>
-      </div>
-    </AppLayout>
+    <router-view />
   </div>
 </template>
 
 <script setup>
-import { isAuthenticated } from "@/services/auth.js";
+import { useMainStore } from "@/stores/main.js";
+
+// Obtén el estado de autenticación desde el store
+const mainStore = useMainStore();
+const isAuthenticated = mainStore.isAuthenticated;
 </script>
 
 <style>

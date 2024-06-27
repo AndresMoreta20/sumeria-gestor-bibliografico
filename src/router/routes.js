@@ -9,11 +9,8 @@ const createRoute = (
     path,
     name,
     component: () => import(`@/views/${componentPath}.vue`),
-    meta: { title },
+    meta: { title, requiresAuth }, // Simplificado
   };
-  if (requiresAuth) {
-    route.meta.requiresAuth = true;
-  }
   return route;
 };
 
@@ -64,7 +61,6 @@ const routeDefinitions = [
     path: "/publisher-form",
     name: "newPublisher",
     componentPath: "PublisherRequestForm",
-    // requiresAuth: true,
     title: "Editorial",
   },
   {

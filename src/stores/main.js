@@ -4,8 +4,8 @@ import axios from "axios";
 import { login } from "@/services/auth.js";
 
 export const useMainStore = defineStore("main", () => {
-  const userName = ref("");
-  const userEmail = ref("");
+  const userName = ref(sessionStorage.getItem("user-name") || "");
+  const userEmail = ref(sessionStorage.getItem("user-email") || "");
   const userToken = ref(sessionStorage.getItem("user-token") || "");
   const userRole = ref(sessionStorage.getItem("user-role") || "");
 
@@ -23,9 +23,11 @@ export const useMainStore = defineStore("main", () => {
   function setUser(payload) {
     if (payload.name) {
       userName.value = payload.name;
+      sessionStorage.setItem("user-name", payload.name);
     }
     if (payload.email) {
       userEmail.value = payload.email;
+      sessionStorage.setItem("user-email", payload.email);
     }
     if (payload.token) {
       userToken.value = payload.token;
@@ -34,8 +36,6 @@ export const useMainStore = defineStore("main", () => {
     if (payload.role) {
       userRole.value = payload.role;
       sessionStorage.setItem("user-role", payload.role);
-      // Set the userName based on the role
-      userName.value = payload.role === "publisher" ? "editorial" : "admin";
     }
   }
 
@@ -44,9 +44,7 @@ export const useMainStore = defineStore("main", () => {
     userEmail.value = "";
     userToken.value = "";
     userRole.value = "";
-    sessionStorage.removeItem("user-token");
-    sessionStorage.removeItem("user-email");
-    sessionStorage.removeItem("user-role");
+    sessionStorage.clear();
   }
 
   async function handleLogin(email, password) {

@@ -1,3 +1,4 @@
+// src/stores/main.js
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import axios from "axios";

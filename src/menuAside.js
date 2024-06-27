@@ -1,17 +1,6 @@
+// src/menuAside.js
 import {
   mdiBook,
-  mdiAccountCircle,
-  mdiMonitor,
-  mdiGithub,
-  mdiLock,
-  mdiAlertCircle,
-  mdiSquareEditOutline,
-  mdiTable,
-  mdiViewList,
-  mdiTelevisionGuide,
-  mdiResponsive,
-  mdiPalette,
-  mdiReact,
   mdiSpeedometer,
   mdiBookOpen,
   mdiHeart,
@@ -20,10 +9,10 @@ import {
   mdiTranslate,
   mdiPencilMinus,
 } from "@mdi/js";
-import { useMainStore } from "@/stores/main.js";
+import { useMainStore } from "@/stores/main";
+import { computed } from "vue";
 
 const mainStore = useMainStore();
-const userRole = mainStore.userRole;
 
 const adminMenu = [
   {
@@ -82,4 +71,9 @@ const publisherMenu = [
   },
 ];
 
-export default userRole === "admin" ? adminMenu : publisherMenu;
+const menu = computed(() => {
+  console.log("Determining menu based on user role:", mainStore.userRole);
+  return mainStore.userRole === "admin" ? adminMenu : publisherMenu;
+});
+
+export default menu;

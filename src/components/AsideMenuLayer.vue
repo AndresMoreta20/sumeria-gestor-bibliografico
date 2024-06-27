@@ -4,6 +4,7 @@ import { computed } from 'vue'
 import AsideMenuList from '@/components/AsideMenuList.vue'
 import AsideMenuItem from '@/components/AsideMenuItem.vue'
 import BaseIcon from '@/components/BaseIcon.vue'
+import { logout } from "@/services/auth.js";
 
 defineProps({
   menu: {
@@ -14,11 +15,14 @@ defineProps({
 
 const emit = defineEmits(['menu-click', 'aside-lg-close-click'])
 
+
+
 const logoutItem = computed(() => ({
   label: 'Logout',
   icon: mdiLogout,
   color: 'info',
-  isLogout: true
+  isLogout: true,
+  to: "/"
 }))
 
 const menuClick = (event, item) => {

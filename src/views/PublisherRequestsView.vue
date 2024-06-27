@@ -1,26 +1,23 @@
 <script setup>
 import { ref, onMounted } from 'vue';
-import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
-import { db } from '@/firebase';
-import { mdiEye, mdiDelete } from '@mdi/js';
 import { useRouter } from 'vue-router';
+import { mdiBook, mdiEye, mdiDelete } from '@mdi/js';
 import SectionMain from '@/components/SectionMain.vue';
 import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue';
 import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.vue';
 import CardBox from '@/components/CardBox.vue';
+import { fetchPublisherRequests, deletePublisherRequest } from '@/api/firebase';
 
 const requests = ref([]);
 const loading = ref(true);
 const loadingStates = ref({});
 const router = useRouter();
 
-const fetchRequests = async () => {
+const loadRequests = async () => {
   try {
-    const querySnapshot = await getDocs(collection(db, 'newPublisherRequest'));
-    requests.value = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    requests.value = await fetchPublisherRequests();
     loading.value = false;
   } catch (error) {
-    console.error('Error fetching requests:', error);
     loading.value = false;
   }
 };
@@ -29,21 +26,22 @@ const viewRequest = (requestId) => {
   router.push({ name: 'PublisherCheckView', params: { id: requestId } });
 };
 
-const deleteRequest = async (requestId) => {
-  try {
-    loadingStates.value[requestId] = true;
-    await deleteDoc(doc(db, 'newPublisherRequest', requestId));
-    fetchRequests();
-  } catch (error) {
-    console.error('Error deleting request:', error);
-  } finally {
-    loadingStates.value[requestId] = false;
+const removeRequest = async (requestId) => {
+  if (confirm('¿Estás seguro de que quieres eliminar esta solicitud?')) {
+    try {
+      loadingStates.value[requestId] = true;
+      await deletePublisherRequest(requestId);
+      await loadRequests();
+    } catch (error) {
+      console.error('Error deleting request:', error);
+    } finally {
+      loadingStates.value[requestId] = false;
+    }
   }
 };
 
-onMounted(fetchRequests);
+onMounted(loadRequests);
 </script>
-
 
 <template>
   <LayoutAuthenticated>
@@ -77,7 +75,7 @@ onMounted(fetchRequests);
                     <span class="mdi mdi-eye"></span>
                   </button>
                   <button 
-                    @click="deleteRequest(request.id)" 
+                    @click="removeRequest(request.id)" 
                     class="bg-red-500 text-white px-2 py-2 rounded-full shadow hover:bg-red-600 transition duration-300 flex items-center justify-center"
                     :disabled="loadingStates[request.id]"
                   >
@@ -92,3 +90,19 @@ onMounted(fetchRequests);
     </SectionMain>
   </LayoutAuthenticated>
 </template>
+
+<style scoped>
+.loader {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+</style>

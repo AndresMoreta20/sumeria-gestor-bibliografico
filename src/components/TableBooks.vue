@@ -1,8 +1,9 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import axios from "axios";
 import { useRouter } from "vue-router";
-import FormCheckRadio from "@/components/FormCheckRadio.vue"; // Asegúrate de importar tu componente correctamente
+import { fetchCategories, toggleBookStatus } from "@/api/woocommerce";
+import FormCheckRadio from "@/components/FormCheckRadio.vue"; 
+import FormControl from "@/components/FormControl.vue";
 
 const router = useRouter();
 
@@ -13,15 +14,14 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['view-book']); // Definir la emisión del evento
+const emit = defineEmits(['view-book']); 
 
 const categories = ref([]);
 const selectedCategory = ref("all");
 const selectedFormat = ref("all");
-const showAvailable = ref(true); // Nuevo estado para mostrar disponibles o no disponibles
+const showAvailable = ref(true);
 const loading = ref(false);
 
-// Filtrar libros por categoría, formato y disponibilidad
 const filteredBooks = computed(() => {
   let booksByCategory = props.books;
   if (selectedCategory.value !== "all") {
@@ -39,56 +39,31 @@ const filteredBooks = computed(() => {
   return booksByCategory.filter(book => book.status === (showAvailable.value ? "publish" : "private"));
 });
 
-// Navegar a la página de nuevo libro
 const goToNewBook = () => {
   router.push({ name: "newBook" });
 };
 
-// Navegar a la vista de detalles del libro
 const viewBook = (bookId) => {
-  emit('view-book', bookId); // Emitir el evento con el ID del libro
+  emit('view-book', bookId);
 };
 
-// Obtener categorías desde WooCommerce
-const fetchCategories = async () => {
-  const consumerKey = import.meta.env.VITE_APP_CONSUMER_KEY;
-  const consumerSecret = import.meta.env.VITE_APP_CONSUMER_SECRET;
+const loadCategories = async () => {
   try {
-    const response = await axios.get(
-      "https://cindyl23.sg-host.com/wp-json/wc/v3/products/categories",
-      {
-        auth: {
-          username: consumerKey,
-          password: consumerSecret,
-        },
-      }
-    );
+    const response = await fetchCategories();
     categories.value = response.data;
   } catch (error) {
     console.error("Error al obtener categorías:", error);
   }
 };
 
-// Cambiar estado del libro a 'private' o 'publish'
-const toggleBookStatus = async (bookId, status) => {
-  const consumerKey = import.meta.env.VITE_APP_CONSUMER_KEY;
-  const consumerSecret = import.meta.env.VITE_APP_CONSUMER_SECRET;
+const updateBookStatus = async (bookId, status) => {
   try {
     if (confirm(`¿Estás seguro de que quieres ${status === 'private' ? 'desactivar' : 'activar'} este libro?`)) {
       loading.value = true;
-      await axios.put(
-        `https://cindyl23.sg-host.com/wp-json/wc/v3/products/${bookId}`,
-        { status },
-        {
-          auth: {
-            username: consumerKey,
-            password: consumerSecret,
-          },
-        }
-      );
+      await toggleBookStatus(bookId, status);
       alert(`Libro ${status === 'private' ? 'desactivado' : 'activado'} con éxito`);
       loading.value = false;
-      location.reload(); // Recargar la página después de cambiar el estado
+      location.reload(); 
     }
   } catch (error) {
     console.error(`Error al ${status === 'private' ? 'desactivar' : 'activar'} el libro:`, error.response?.data || error);
@@ -97,13 +72,15 @@ const toggleBookStatus = async (bookId, status) => {
   }
 };
 
-onMounted(fetchCategories);
+onMounted(loadCategories);
 </script>
 
 <template>
+  <FormControl placeholder="Search (ctrl+k)" ctrl-k-focus transparent borderless />
   <div class="flex justify-between items-center mb-6">
     <div>
       <label class="mr-2">Formato:</label>
+     
       <select v-model="selectedFormat" class="border rounded p-2">
         <option value="all">Todos</option>
         <option value="physical">Físicos</option>
@@ -173,7 +150,7 @@ onMounted(fetchCategories);
           Ver
         </button>
         <button
-          @click="toggleBookStatus(book.id, book.status === 'publish' ? 'private' : 'publish')"
+          @click="updateBookStatus(book.id, book.status === 'publish' ? 'private' : 'publish')"
           class="bg-red-500 text-white py-2 px-4 rounded w-full"
         >
           {{ book.status === 'publish' ? 'Desactivar' : 'Activar' }}

@@ -96,7 +96,7 @@ export const logout = () => {
   const mainStore = useMainStore();
   mainStore.resetUser();
   sessionStorage.clear(); // Clear all session storage items
-  window.location.href = "/login";
+  // window.location.href = "/login";
 };
 
 export const isAuthenticated = () => {

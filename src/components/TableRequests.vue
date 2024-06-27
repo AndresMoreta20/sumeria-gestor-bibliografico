@@ -1,20 +1,17 @@
 <script setup>
 import { ref, onMounted } from 'vue';
-import { collection, getDocs, getFirestore } from 'firebase/firestore';
 import { useRouter } from 'vue-router';
+import { fetchRequests, deleteRequest } from '@/api/firebase';
 
 const router = useRouter();
 const requests = ref([]);
 const loading = ref(true);
 
-const fetchRequests = async () => {
+const loadRequests = async () => {
   try {
-    const db = getFirestore();
-    const querySnapshot = await getDocs(collection(db, 'bookRequests'));
-    requests.value = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    requests.value = await fetchRequests();
     loading.value = false;
   } catch (error) {
-    console.error('Error fetching requests:', error);
     loading.value = false;
   }
 };
@@ -23,7 +20,18 @@ const goToNewRequest = () => {
   router.push({ name: 'requestForm' });
 };
 
-onMounted(fetchRequests);
+const removeRequest = async (requestId) => {
+  if (confirm('¿Estás seguro de que quieres eliminar esta solicitud?')) {
+    try {
+      await deleteRequest(requestId);
+      requests.value = requests.value.filter(request => request.id !== requestId);
+    } catch (error) {
+      console.error('Error deleting request:', error);
+    }
+  }
+};
+
+onMounted(loadRequests);
 </script>
 
 <template>
@@ -49,7 +57,7 @@ onMounted(fetchRequests);
         <p class="text-gray-500 mb-4">{{ request.category }}</p>
         <div class="mt-auto flex justify-between w-full">
           <button class="bg-gray-300 text-black py-2 px-4 rounded w-full mr-2">Edit</button>
-          <button @click="deleteRequest(request.id)" class="bg-red-500 text-white py-2 px-4 rounded w-full">Delete</button>
+          <button @click="removeRequest(request.id)" class="bg-red-500 text-white py-2 px-4 rounded w-full">Delete</button>
         </div>
       </div>
     </div>

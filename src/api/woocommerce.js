@@ -20,12 +20,7 @@ export const fetchCategories = async () => {
   try {
     const response = await axios.get(
       "https://cindyl23.sg-host.com/wp-json/wc/v3/products/categories",
-      {
-        auth: {
-          username: consumerKey,
-          password: consumerSecret,
-        },
-      }
+      getAuth()
     );
     return response;
   } catch (error) {

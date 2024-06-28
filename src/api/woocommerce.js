@@ -18,8 +18,16 @@ const getAuth = () => ({
 
 export const fetchCategories = async () => {
   try {
-    const response = await apiClient.get("/products/categories", getAuth());
-    return response.data;
+    const response = await axios.get(
+      "https://cindyl23.sg-host.com/wp-json/wc/v3/products/categories",
+      {
+        auth: {
+          username: consumerKey,
+          password: consumerSecret,
+        },
+      }
+    );
+    return response;
   } catch (error) {
     console.error("Error fetching categories:", error);
     throw error;
@@ -44,6 +52,26 @@ export const fetchPublishers = async () => {
     return response.data;
   } catch (error) {
     console.error("Error fetching publishers:", error);
+    throw error;
+  }
+};
+
+export const fetchBooks = async () => {
+  try {
+    const response = await apiClient.get("/products?per_page=100", getAuth());
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching books:", error);
+    throw error;
+  }
+};
+
+export const fetchBookDetails = async (bookId) => {
+  try {
+    const response = await apiClient.get(`/products/${bookId}`, getAuth());
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching book details:", error);
     throw error;
   }
 };

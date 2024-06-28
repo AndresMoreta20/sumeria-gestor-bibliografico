@@ -1,35 +1,17 @@
 <script setup>
-import { ref, onMounted } from 'vue';
-import { fetchPublishers } from '@/api/woocommerce';
-import SectionMain from '@/components/SectionMain.vue';
-import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue';
-import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.vue';
-import CardBox from '@/components/CardBox.vue';
-import TablePublishers from '@/components/TablePublishers.vue';
+import DataTableView from '@/components/DataTableView.vue'
+import { mdiTableBorder } from '@mdi/js'
+import { fetchPublishers } from '@/api/woocommerce'
 
-const publishers = ref([]);
+const endpoint = 'https://cindyl23.sg-host.com/wp-json/wc/v3/products/attributes/2/terms'  // Asegúrate de que este sea el endpoint correcto para los editores.
+const title = 'Publishers'
+const columns = ['id', 'name', 'slug', 'description']
+const icon = mdiTableBorder
+const checkable = false
 
-const loadPublishers = async () => {
-  try {
-    publishers.value = await fetchPublishers();
-  } catch (error) {
-    console.error('Error fetching publishers:', error);
-  }
-};
-
-onMounted(loadPublishers);
+const dataFetchFunction = fetchPublishers
 </script>
 
 <template>
-  <LayoutAuthenticated>
-    <SectionMain>
-      <SectionTitleLineWithButton title="Publishers" main>
-        <!-- Optional button can go here -->
-      </SectionTitleLineWithButton>
-      
-      <CardBox class="mb-6" has-table>
-        <TablePublishers :publishers="publishers" />
-      </CardBox>
-    </SectionMain>
-  </LayoutAuthenticated>
+  <DataTableView :endpoint="endpoint" :title="title" :columns="columns" :icon="icon" :checkable="checkable" :data-fetch-function="dataFetchFunction" />
 </template>

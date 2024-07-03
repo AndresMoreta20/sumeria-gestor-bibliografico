@@ -1,4 +1,3 @@
-// src/api/woocommerce.js
 import axios from "axios";
 
 const apiClient = axios.create({
@@ -67,6 +66,28 @@ export const fetchBookDetails = async (bookId) => {
     return response.data;
   } catch (error) {
     console.error("Error fetching book details:", error);
+    throw error;
+  }
+};
+
+// Nueva función para obtener datos de ventas
+export const fetchSalesData = async () => {
+  try {
+    const response = await apiClient.get("/reports/sales", getAuth());
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching sales data:", error);
+    throw error;
+  }
+};
+
+// Nueva función para obtener datos de clientes
+export const fetchCustomersData = async () => {
+  try {
+    const response = await apiClient.get("/customers", getAuth());
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching customers data:", error);
     throw error;
   }
 };

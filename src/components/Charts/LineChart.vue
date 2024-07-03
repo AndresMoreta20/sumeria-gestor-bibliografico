@@ -7,7 +7,8 @@ import {
   LineController,
   LinearScale,
   CategoryScale,
-  Tooltip
+  Tooltip,
+  Legend
 } from 'chart.js'
 
 const props = defineProps({
@@ -21,7 +22,7 @@ const root = ref(null)
 
 let chart
 
-Chart.register(LineElement, PointElement, LineController, LinearScale, CategoryScale, Tooltip)
+Chart.register(LineElement, PointElement, LineController, LinearScale, CategoryScale, Tooltip, Legend)
 
 onMounted(() => {
   chart = new Chart(root.value, {
@@ -32,7 +33,7 @@ onMounted(() => {
       maintainAspectRatio: false,
       scales: {
         y: {
-          display: false
+          display: true
         },
         x: {
           display: true
@@ -40,7 +41,7 @@ onMounted(() => {
       },
       plugins: {
         legend: {
-          display: false
+          display: true
         }
       }
     }

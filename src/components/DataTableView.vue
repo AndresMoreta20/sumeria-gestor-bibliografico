@@ -6,7 +6,7 @@ import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
 import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.vue'
 import CardBox from '@/components/CardBox.vue'
 import TableGeneric from '@/components/TableGeneric.vue'
-import LoadingIndicator from '@/components/LoadingIndicator.vue' // Asegúrate de tener este componente
+import LoadingIndicator from '@/components/LoadingIndicator.vue'
 
 const props = defineProps({
   endpoint: {
@@ -21,6 +21,11 @@ const props = defineProps({
     type: Array,
     required: true
   },
+  columnLabels: {
+    type: Object,
+    required: false,
+    default: () => ({})
+  },
   icon: {
     type: String,
     required: false
@@ -32,39 +37,45 @@ const props = defineProps({
   dataFetchFunction: {
     type: Function,
     required: false
+  },
+  dataTransform: {
+    type: Function,
+    required: false
   }
 })
 
 const data = ref([])
 const loading = ref(true)
+const error = ref(null)
 
 const consumerKey = import.meta.env.VITE_APP_CONSUMER_KEY
 const consumerSecret = import.meta.env.VITE_APP_CONSUMER_SECRET
 
 const fetchData = async () => {
   loading.value = true
-  if (props.dataFetchFunction) {
-    try {
+  error.value = null
+
+  try {
+    let response
+    if (props.dataFetchFunction) {
       data.value = await props.dataFetchFunction()
-    } catch (error) {
-      console.error('Error fetching data:', error)
-    } finally {
-      loading.value = false
-    }
-  } else {
-    try {
-      const response = await axios.get(props.endpoint, {
+    } else {
+      response = await axios.get(props.endpoint, {
         auth: {
           username: consumerKey,
           password: consumerSecret
         }
       })
       data.value = response.data
-    } catch (error) {
-      console.error('Error fetching data:', error)
-    } finally {
-      loading.value = false
     }
+    if (props.dataTransform) {
+      data.value = props.dataTransform(data.value)
+    }
+  } catch (err) {
+    console.error('Error fetching data:', err)
+    error.value = 'Error fetching data. Please try again later.'
+  } finally {
+    loading.value = false
   }
 }
 
@@ -80,10 +91,13 @@ onMounted(fetchData)
 
       <CardBox class="mb-6" has-table>
         <template v-if="loading">
-          <LoadingIndicator /> <!-- Componente de indicador de carga -->
+          <LoadingIndicator />
+        </template>
+        <template v-else-if="error">
+          <div class="text-red-500">{{ error }}</div> <!-- Mostrar mensaje de error -->
         </template>
         <template v-else>
-          <TableGeneric :items="data" :columns="columns" :checkable="checkable" />
+          <TableGeneric :items="data" :columns="columns" :column-labels="columnLabels" :checkable="checkable" />
         </template>
       </CardBox>
     </SectionMain>

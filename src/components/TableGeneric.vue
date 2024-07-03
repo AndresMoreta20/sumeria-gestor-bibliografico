@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { mdiEye, mdiTrashCan, mdiMagnify } from '@mdi/js'
+import { useRouter } from 'vue-router' // Importar el router
+import { mdiEye, mdiMagnify, mdiPlus } from '@mdi/js'
 import CardBoxModal from '@/components/CardBoxModal.vue'
 import TableCheckboxCell from '@/components/TableCheckboxCell.vue'
 import BaseLevel from '@/components/BaseLevel.vue'
@@ -8,6 +9,8 @@ import BaseButtons from '@/components/BaseButtons.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import FormControl from '@/components/FormControl.vue'
+
+const router = useRouter() // Usar el router
 
 const props = defineProps({
   items: {
@@ -21,11 +24,19 @@ const props = defineProps({
   columns: {
     type: Array,
     required: true
+  },
+  columnLabels: {
+    type: Object,
+    required: false,
+    default: () => ({})
+  },
+  newRoute: {
+    type: String,
+    required: true // Añadir la prop para la ruta de creación
   }
 })
 
 const isModalActive = ref(false)
-const isModalDangerActive = ref(false)
 const selectedItem = ref(null)
 const searchQuery = ref('')
 const perPage = ref(5)
@@ -76,34 +87,17 @@ const viewItem = (item) => {
   isModalActive.value = true
 }
 
-const confirmDeleteItem = (item) => {
-  selectedItem.value = item
-  isModalDangerActive.value = true
-}
-
-const deleteItem = async () => {
-  try {
-    // Aquí puedes realizar la llamada a la API para eliminar el elemento
-    // Ejemplo: await axios.delete(`https://your-api-endpoint/${selectedItem.value.id}`)
-    console.log('Elemento eliminado:', selectedItem.value.id)
-    isModalDangerActive.value = false
-    // Aquí puedes actualizar la lista de items después de la eliminación
-  } catch (error) {
-    console.error('Error deleting item:', error)
-  }
+const goToNew = () => {
+  router.push({ name: props.newRoute }) // Redirigir a la ruta nueva
 }
 </script>
 
 <template>
   <CardBoxModal v-model="isModalActive" title="Detalles del elemento">
     <div v-if="selectedItem">
-      <p v-for="(value, key) in selectedItem" :key="key">{{ key }}: {{ value }}</p>
+      <p>ID: {{ selectedItem.id }}</p>
+      <p>Nombre: {{ selectedItem.name }}</p>
     </div>
-  </CardBoxModal>
-
-  <CardBoxModal v-model="isModalDangerActive" title="Confirmar eliminación" button="danger" has-cancel @confirm="deleteItem">
-    <p>¿Estás seguro de que deseas eliminar este elemento?</p>
-    <p><b>{{ selectedItem?.name }}</b></p>
   </CardBoxModal>
 
   <div class="flex justify-between items-center mb-4">
@@ -113,13 +107,14 @@ const deleteItem = async () => {
         <path :d="mdiMagnify" />
       </svg>
     </div>
+    <BaseButton color="primary" :icon="mdiPlus" @click="goToNew">Nuevo</BaseButton> <!-- Botón Nuevo -->
   </div>
 
   <table>
     <thead>
       <tr>
         <th v-if="checkable" />
-        <th v-for="column in columns" :key="column">{{ column }}</th>
+        <th v-for="column in columns" :key="column">{{ columnLabels[column] || column }}</th>
         <th />
       </tr>
     </thead>
@@ -130,7 +125,6 @@ const deleteItem = async () => {
         <td class="before:hidden lg:w-1 whitespace-nowrap">
           <BaseButtons type="justify-start lg:justify-end" no-wrap>
             <BaseButton color="info" :icon="mdiEye" small @click="viewItem(item)" />
-            <BaseButton color="danger" :icon="mdiTrashCan" small @click="confirmDeleteItem(item)" />
           </BaseButtons>
         </td>
       </tr>

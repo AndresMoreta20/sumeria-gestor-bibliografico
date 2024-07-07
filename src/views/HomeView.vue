@@ -8,6 +8,7 @@ import {
   mdiChartPie,
   mdiCartOutline,
   mdiAccountMultiple,
+  mdiCurrencyUsd,
 } from "@mdi/js";
 import * as chartConfig from "@/components/Charts/chart.config.js";
 import LineChart from "@/components/Charts/LineChart.vue";
@@ -23,21 +24,30 @@ const chartDataCustomers = ref(null);
 const totalSales = ref(0);
 const totalOrders = ref(0);
 const totalCustomers = ref(0);
+const averageOrderValue = ref(0);
 
 const fillChartData = async () => {
   try {
     const salesData = await fetchSalesData();
     const customersData = await fetchCustomersData();
-    const booksData = await fetchBooks();
 
     // Generar datos para los gráficos
-    chartDataSales.value = chartConfig.generateChartData(salesData);
-    chartDataCustomers.value = chartConfig.generateChartData(customersData);
+    chartDataSales.value = chartConfig.generateChartData(
+      salesData,
+      'Ventas totales',
+      'total_sales'
+    );
+    chartDataCustomers.value = chartConfig.generateChartData(
+      salesData,
+      'Número de pedidos',
+      'orders_count'
+    );
 
     // Calcular métricas relevantes
-    totalSales.value = salesData.reduce((total, item) => total + parseFloat(item.total_sales), 0);
+    totalSales.value = salesData.reduce((total, item) => total + parseFloat(item.total_sales), 0).toFixed(2);
     totalOrders.value = salesData.reduce((total, item) => total + parseInt(item.orders_count), 0);
     totalCustomers.value = customersData.length;
+    averageOrderValue.value = (totalSales.value / totalOrders.value).toFixed(2);
   } catch (error) {
     console.error("Error fetching data:", error);
   }
@@ -51,28 +61,43 @@ onMounted(() => {
 <template>
   <LayoutAuthenticated>
     <SectionMain>
-      <div class="grid grid-cols-1 gap-6 lg:grid-cols-4 mb-6">
+      <!-- Power BI Iframe -->
+      <iframe
+        title="ReporteSumeria"
+        width="100%"
+        height="800px"
+        src="https://app.powerbi.com/view?r=eyJrIjoiYWNmZDJiMzItNWJiZi00OTZhLTkwM2YtNjVhODY5YTY2ODA2IiwidCI6IjU4NWE0ZDkyLWRiMWQtNGJiYi1iNWFjLWM1Mjk5ZTM4OTRlMyIsImMiOjR9"
+        frameborder="0"
+        allowFullScreen="true"
+      ></iframe>
+      <!-- <div class="grid grid-cols-1 gap-6 lg:grid-cols-4 mb-6">
         <CardBoxWidget
-          color="text-grey-500"
-          :icon="mdiCartOutline"
+          color="text-green-500"
+          :icon="mdiCurrencyUsd"
           :number="totalSales"
-          label="Total de Ventas"
+          label="Total de Ventas ($)"
         />
         <CardBoxWidget
           color="text-blue-500"
-          :icon="mdiBookOpenPageVariant"
+          :icon="mdiCartOutline"
           :number="totalOrders"
           label="Total de Pedidos"
         />
         <CardBoxWidget
-          color="text-green-500"
+          color="text-red-500"
           :icon="mdiAccountMultiple"
           :number="totalCustomers"
           label="Total de Clientes"
         />
+        <CardBoxWidget
+          color="text-yellow-500"
+          :icon="mdiCurrencyUsd"
+          :number="averageOrderValue"
+          label="Valor Promedio de Pedido ($)"
+        />
       </div>
 
-      <SectionTitleLineWithButton :icon="mdiChartPie" title="Ventas y Clientes">
+      <SectionTitleLineWithButton :icon="mdiChartPie" title="Análisis de Ventas">
         <BaseButton :icon="mdiReload" color="whiteDark" @click="fillChartData" />
       </SectionTitleLineWithButton>
 
@@ -85,8 +110,8 @@ onMounted(() => {
       <CardBox class="mb-6">
         <div v-if="chartDataCustomers">
           <LineChart :data="chartDataCustomers" class="h-96" />
-        </div>
-      </CardBox>
+        </div> -->
+      <!-- </CardBox> -->
     </SectionMain>
   </LayoutAuthenticated>
 </template>

@@ -41,7 +41,7 @@ watch(modelValueProp, (value) => {
   file.value = value
 
   if (!value) {
-    root.value.input.value = null
+    root.value.value = null
   }
 })
 
@@ -51,11 +51,7 @@ const upload = (event) => {
   file.value = value[0]
 
   emit('update:modelValue', file.value)
-
-
 }
-
-
 </script>
 
 <template>
@@ -83,7 +79,7 @@ const upload = (event) => {
       class="px-4 py-2 bg-gray-100 dark:bg-slate-800 border-gray-200 dark:border-slate-700 border rounded-r"
     >
       <span class="text-ellipsis line-clamp-1">
-        {{ file.name }}
+        {{ file?.name ?? '' }}
       </span>
     </div>
   </div>

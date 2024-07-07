@@ -47,7 +47,15 @@ const props = defineProps({
   required: Boolean,
   borderless: Boolean,
   transparent: Boolean,
-  ctrlKFocus: Boolean
+  ctrlKFocus: Boolean,
+  min: {
+    type: Number,
+    default: null
+  },
+  max: {
+    type: Number,
+    default: null
+  }
 })
 
 const emit = defineEmits(['update:modelValue', 'setRef'])
@@ -159,6 +167,9 @@ if (props.ctrlKFocus) {
       :placeholder="placeholder"
       :type="computedType"
       :class="inputElClass"
+      :min="min"
+      :max="max"
+      @input="computedType === 'number' ? (computedValue = Math.max(computedValue, 0)) : null"
     />
     <FormControlIcon v-if="icon" :icon="icon" :h="controlIconH" />
   </div>

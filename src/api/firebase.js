@@ -2,8 +2,8 @@
 import {
   collection,
   getDocs,
-  getFirestore,
   deleteDoc,
+  addDoc,
   doc,
 } from "firebase/firestore";
 import { db } from "@/firebase";
@@ -23,6 +23,26 @@ export const deleteRequest = async (requestId) => {
     await deleteDoc(doc(db, "bookRequests", requestId));
   } catch (error) {
     console.error("Error deleting request:", error);
+    throw error;
+  }
+};
+
+export const approveRequest = async (request) => {
+  try {
+    await addDoc(collection(db, "approvedBooks"), request);
+    await deleteRequest(request.id);
+  } catch (error) {
+    console.error("Error approving request:", error);
+    throw error;
+  }
+};
+
+export const rejectRequest = async (request) => {
+  try {
+    await addDoc(collection(db, "declinedBooks"), request);
+    await deleteRequest(request.id);
+  } catch (error) {
+    console.error("Error rejecting request:", error);
     throw error;
   }
 };

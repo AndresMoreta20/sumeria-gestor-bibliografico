@@ -13,4 +13,14 @@ export default defineConfig({
       "@views": resolve(__dirname, "./src/views"),
     },
   },
+  server: {
+    proxy: {
+      "/firebase-storage": {
+        target: "https://firebasestorage.googleapis.com",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/firebase-storage/, ""),
+      },
+    },
+    cors: true,
+  },
 });

@@ -1,7 +1,7 @@
 <script setup>
 import { computed, useSlots } from "vue";
 
-defineProps({
+const props = defineProps({
   label: {
     type: String,
     default: null,
@@ -11,6 +11,10 @@ defineProps({
     default: null,
   },
   help: {
+    type: String,
+    default: null,
+  },
+  error: {
     type: String,
     default: null,
   },
@@ -32,18 +36,28 @@ const wrapperClass = computed(() => {
 
   return base;
 });
+
+const labelClass = computed(() => {
+  const base = ['block font-bold mb-2'];
+  if (props.error) {
+    base.push('text-red-600');
+  }
+  return base.join(' ');
+});
+
+const helpClass = computed(() => {
+  return props.error ? 'text-xs text-red-600 mt-1' : 'text-xs text-gray-500 dark:text-slate-400 mt-1';
+});
 </script>
 
 <template>
   <div class="mb-6 last:mb-0">
-    <label v-if="label" :for="labelFor" class="block font-bold mb-2">{{
-      label
-    }}</label>
+    <label v-if="label" :for="labelFor" :class="labelClass">{{ label }}</label>
     <div :class="wrapperClass">
       <slot />
     </div>
-    <div v-if="help" class="text-xs text-gray-500 dark:text-slate-400 mt-1">
-      {{ help }}
+    <div v-if="help || error" :class="helpClass">
+      {{ error || help }}
     </div>
   </div>
 </template>

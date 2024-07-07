@@ -46,3 +46,22 @@ export const rejectRequest = async (request) => {
     throw error;
   }
 };
+
+export const fetchPublisherRequests = async () => {
+  try {
+    const querySnapshot = await getDocs(collection(db, "newPublisherRequest"));
+    return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error("Error fetching publisher requests:", error);
+    throw error;
+  }
+};
+
+export const deletePublisherRequest = async (requestId) => {
+  try {
+    await deleteDoc(doc(db, "newPublisherRequest", requestId));
+  } catch (error) {
+    console.error("Error deleting publisher request:", error);
+    throw error;
+  }
+};

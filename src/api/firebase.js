@@ -2,8 +2,8 @@
 import {
   collection,
   getDocs,
-  getFirestore,
   deleteDoc,
+  addDoc,
   doc,
 } from "firebase/firestore";
 import { db } from "@/firebase";
@@ -27,21 +27,22 @@ export const deleteRequest = async (requestId) => {
   }
 };
 
-export const fetchPublisherRequests = async () => {
+export const approveRequest = async (request) => {
   try {
-    const querySnapshot = await getDocs(collection(db, "newPublisherRequest"));
-    return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    await addDoc(collection(db, "approvedBooks"), request);
+    await deleteRequest(request.id);
   } catch (error) {
-    console.error("Error fetching publisher requests:", error);
+    console.error("Error approving request:", error);
     throw error;
   }
 };
 
-export const deletePublisherRequest = async (requestId) => {
+export const rejectRequest = async (request) => {
   try {
-    await deleteDoc(doc(db, "newPublisherRequest", requestId));
+    await addDoc(collection(db, "declinedBooks"), request);
+    await deleteRequest(request.id);
   } catch (error) {
-    console.error("Error deleting publisher request:", error);
+    console.error("Error rejecting request:", error);
     throw error;
   }
 };

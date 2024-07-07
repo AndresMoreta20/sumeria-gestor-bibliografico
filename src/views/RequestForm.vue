@@ -1,40 +1,102 @@
 <script setup>
-import { reactive, ref } from 'vue';
-import { collection, addDoc, getFirestore } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
-import SectionMain from '@/components/SectionMain.vue';
-import CardBox from '@/components/CardBox.vue';
-import FormField from '@/components/FormField.vue';
-import FormControl from '@/components/FormControl.vue';
-import BaseDivider from '@/components/BaseDivider.vue';
-import BaseButton from '@/components/BaseButton.vue';
-import BaseButtons from '@/components/BaseButtons.vue';
-import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.vue';
-import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue';
-import { useRouter } from 'vue-router';
+import { reactive, ref, watch, onMounted } from "vue";
+import { collection, addDoc, getFirestore } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
+import {
+  getStorage,
+  ref as storageRef,
+  uploadBytes,
+  getDownloadURL,
+} from "firebase/storage";
+import SectionMain from "@/components/SectionMain.vue";
+import CardBox from "@/components/CardBox.vue";
+import FormField from "@/components/FormField.vue";
+import FormControl from "@/components/FormControl.vue";
+import FormFilePicker from "@/components/FormFilePicker.vue";
+import BaseDivider from "@/components/BaseDivider.vue";
+import BaseButton from "@/components/BaseButton.vue";
+import BaseButtons from "@/components/BaseButtons.vue";
+import SectionTitleLineWithButton from "@/components/SectionTitleLineWithButton.vue";
+import LayoutAuthenticated from "@/layouts/LayoutAuthenticated.vue";
+import { useRouter } from "vue-router";
+import { mdiBookOutline } from "@mdi/js";
+import { fetchCategories, fetchAuthors, fetchLanguages } from "@/api/woocommerce";
 
 const router = useRouter();
 
+const categories = ref([]);
+const authors = ref([]);
+const languages = ref([]);
+const newEntry = ref({ category: '', author: '', language: '' });
+const showNewInput = reactive({ category: false, author: false, language: false });
+
+onMounted(async () => {
+  try {
+    const categoriesResponse = await fetchCategories();
+    categories.value = categoriesResponse.data;
+
+    const authorsResponse = await fetchAuthors();
+    authors.value = authorsResponse.data;
+
+    const languagesResponse = await fetchLanguages();
+    languages.value = languagesResponse.data;
+
+    form.publisher = sessionStorage.getItem('user-name') || '';
+  } catch (error) {
+    console.error("Error fetching data:", error);
+  }
+});
+
+const handleSelectionChange = (event, type) => {
+  if (event.target.value === 'new') {
+    showNewInput[type] = true;
+    form[type] = '';
+    errors[type] = ''; // Limpiar el mensaje de error cuando se selecciona "Añadir nuevo"
+  } else {
+    showNewInput[type] = false;
+    form[type] = event.target.value;
+  }
+};
+
+const addNewEntry = (type) => {
+  if (newEntry.value[type].trim() !== '') {
+    form[type] = newEntry.value[type].trim();
+    if (type === 'category') {
+      categories.value.push({ id: form[type], name: form[type] });
+    } else if (type === 'author') {
+      authors.value.push({ id: form[type], name: form[type] });
+    } else if (type === 'language') {
+      languages.value.push({ id: form[type], name: form[type] });
+    }
+    showNewInput[type] = false;
+    newEntry.value[type] = '';
+  }
+};
+
 const form = reactive({
-  title: '',
-  format: 'E-book',
+  title: "",
+  format: "E-book",
   file: null,
-  isbn: '',
-  category: '',
-  author: '',
-  publisher: '',
-  language: '',
-  regularPrice: '',
-  salePrice: '',
-  shortDescription: '',
-  description: '',
-  imageUrl: '',
+  isbn: "",
+  category: "",
+  author: "",
+  publisher: "",
+  language: "",
+  regularPrice: "",
+  salePrice: "",
+  shortDescription: "",
+  description: "",
   imageFile: null,
   stockQuantity: 100,
-  sku: ''
+  sku: "",
 });
 
 const loading = ref(false);
+const imageLoading = ref(false);
+const fileLoading = ref(false);
+const errors = reactive({});
+const imagePreview = ref(null);
+const submitError = ref(null);
 
 const generateSKU = () => {
   const date = new Date();
@@ -42,147 +104,284 @@ const generateSKU = () => {
   return `SKU${timestamp}`;
 };
 
+const validateISBN = (isbn) => {
+  isbn = isbn.replace(/[-\s]/g, "");
+  if (isbn.length !== 10 && isbn.length !== 13) return false;
+
+  let sum = 0;
+  if (isbn.length === 10) {
+    for (let i = 0; i < 9; i++) {
+      sum += (10 - i) * parseInt(isbn.charAt(i));
+    }
+    let checksum = 11 - (sum % 11);
+    if (checksum === 11) checksum = 0;
+    if (checksum === 10) checksum = "X";
+    return checksum.toString() === isbn.charAt(9).toUpperCase();
+  } else {
+    for (let i = 0; i < 12; i++) {
+      sum += (i % 2 === 0 ? 1 : 3) * parseInt(isbn.charAt(i));
+    }
+    let checksum = 10 - (sum % 10);
+    if (checksum === 10) checksum = 0;
+    return checksum.toString() === isbn.charAt(12);
+  }
+};
+
+const validateField = (field) => {
+  switch (field) {
+    case "title":
+      errors[field] = !form[field] ? "El título es requerido" : "";
+      break;
+    case "isbn":
+      errors[field] = !form[field]
+        ? "El ISBN es requerido"
+        : !validateISBN(form[field])
+        ? "El ISBN no es válido"
+        : "";
+      break;
+    case "author":
+      errors[field] = !form[field] && !showNewInput.author ? "El autor es requerido" : "";
+      break;
+    case "publisher":
+      errors[field] = !form[field] ? "La editorial es requerida" : "";
+      break;
+    case "language":
+      errors[field] = !form[field] && !showNewInput.language ? "El idioma es requerido" : "";
+      break;
+    case "regularPrice":
+      errors[field] =
+        !form[field] || isNaN(form[field]) || form[field] < 0
+          ? "Se requiere un precio regular válido y no negativo"
+          : "";
+      break;
+    case "salePrice":
+      errors[field] =
+        form[field] && (isNaN(form[field]) || form[field] < 0)
+          ? "Se requiere un precio de oferta válido y no negativo"
+          : (form[field] && form[field] > form.regularPrice)
+          ? "El precio de oferta no puede ser mayor que el precio regular"
+          : "";
+      break;
+    case "shortDescription":
+      errors[field] = !form[field] ? "La descripción corta es requerida" : "";
+      break;
+    case "imageFile":
+      errors[field] = !form[field] ? "La imagen de portada es requerida" : "";
+      break;
+    case "file":
+      errors[field] = !form[field]
+        ? "El archivo EPUB es requerido"
+        : form[field] && !form[field].name.endsWith(".epub")
+        ? "El archivo debe estar en formato EPUB"
+        : "";
+      break;
+  }
+};
+
+Object.keys(form).forEach((field) => {
+  watch(
+    () => form[field],
+    () => validateField(field)
+  );
+});
+
+const validateForm = () => {
+  Object.keys(form).forEach(validateField);
+  return Object.values(errors).every((error) => error === "");
+};
+
+const uploadFile = async (file, path) => {
+  const storage = getStorage();
+  const fileRef = storageRef(storage, path);
+  await uploadBytes(fileRef, file);
+  return getDownloadURL(fileRef);
+};
+
+const handleImageChange = (file) => {
+  form.imageFile = file;
+  errors.imageFile = "";
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    imagePreview.value = e.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
+const handleFileChange = (file) => {
+  if (file.name.endsWith(".epub")) {
+    form.file = file;
+    errors.file = "";
+  } else {
+    errors.file = "El archivo debe estar en formato EPUB";
+    form.file = null;
+  }
+};
+
 const submit = async () => {
+  submitError.value = null;
+
+  if (!validateForm()) {
+    return;
+  }
+
   loading.value = true;
   try {
-    let imageUrl = form.imageUrl;
-    let fileUrl = '';
-
-    // Generate a unique SKU
-    const sku = generateSKU();
-    form.sku = sku;
-
-    // Upload the image file if provided
-    if (form.imageFile) {
-      const formData = new FormData();
-      formData.append('file', form.imageFile);
-      formData.append('name', form.imageFile.name);
-
-      const uploadResponse = await axios.post('https://cindyl23.sg-host.com/wp-json/wp/v2/media', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': `Basic ${btoa(`${consumerKey}:${consumerSecret}`)}`
-        }
-      });
-
-      imageUrl = uploadResponse.data.source_url;
-    }
-
-    // Upload the book file if provided
-    if (form.file) {
-      const fileData = new FormData();
-      fileData.append('file', form.file);
-      fileData.append('name', form.file.name);
-
-      const uploadResponse = await axios.post('https://cindyl23.sg-host.com/wp-json/wp/v2/media', fileData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': `Basic ${btoa(`${consumerKey}:${consumerSecret}`)}`
-        }
-      });
-
-      fileUrl = uploadResponse.data.source_url;
-    }
-
-    const requestData = {
-      title: form.title || 'Frankenstein',
-      format: form.format || 'E-book',
-      isbn: form.isbn || '9788498450569',
-      category: form.category || '190',
-      author: form.author || 'Mary Wollstonecraft Shelley',
-      publisher: form.publisher || 'ALGAR EDITORIAL',
-      language: form.language || 'Español',
-      regularPrice: form.regularPrice || '10',
-      salePrice: form.salePrice || '8',
-      shortDescription: form.shortDescription || 'En la novela, el Monstruo aparece como una criatura humanoide de enorme estatura.',
-      description: form.description || 'En la novela, el Monstruo aparece como una criatura humanoide de enorme estatura.',
-      imageUrl: imageUrl || 'https://i0.wp.com/cindyl23.sg-host.com/wp-content/uploads/2024/06/Frankenstein.webp?fit=220%2C360&ssl=1',
-      fileUrl: fileUrl || 'https://cindyl23.sg-host.com/wp-content/themes/bookworm/assets/img/FormatoAntiguo.epub',
-      stockQuantity: form.stockQuantity,
-      sku: form.sku,
-      status: 'pending'
-    };
-
     const auth = getAuth();
     const user = auth.currentUser;
 
-    if (user) {
-      const db = getFirestore();
-      const requestRef = collection(db, 'bookRequests');
-      await addDoc(requestRef, {
-        ...requestData,
-        userEmail: user.email
-      });
-      alert('Request submitted successfully');
-      router.push('/requests'); 
-    } else {
-      alert('You must be logged in to submit a request');
+    if (!user) {
+      submitError.value = "Debes estar conectado para enviar una solicitud";
+      return;
     }
+
+    const sku = generateSKU();
+
+    imageLoading.value = true;
+    const coverUrl = await uploadFile(
+      form.imageFile,
+      `covers/${sku}_${form.imageFile.name}`
+    );
+    imageLoading.value = false;
+
+    fileLoading.value = true;
+    const fileUrl = await uploadFile(
+      form.file,
+      `books/${sku}_${form.file.name}`
+    );
+    fileLoading.value = false;
+
+    const requestData = {
+      title: form.title,
+      format: form.format,
+      isbn: form.isbn,
+      category: form.category,
+      author: form.author,
+      publisher: form.publisher,
+      language: form.language,
+      regularPrice: parseFloat(form.regularPrice),
+      salePrice: form.salePrice ? parseFloat(form.salePrice) : null,
+      shortDescription: form.shortDescription,
+      description: form.description,
+      coverUrl,
+      fileUrl,
+      stockQuantity: form.stockQuantity,
+      sku,
+      status: "pending",
+      userEmail: user.email,
+      createdAt: new Date(),
+    };
+
+    const db = getFirestore();
+    const requestRef = collection(db, "bookRequests");
+    await addDoc(requestRef, requestData);
+
+    alert("Solicitud enviada con éxito");
+    router.push("/requests");
   } catch (error) {
-    console.error('Error creating request:', error.response?.data || error);
-    alert('Error creating request');
+    submitError.value = "Error al crear la solicitud: " + error.message;
   } finally {
     loading.value = false;
+    imageLoading.value = false;
+    fileLoading.value = false;
   }
 };
 
 const cancel = () => {
-  router.push('/requests');
+  router.push("/requests");
 };
 </script>
 
 <template>
   <LayoutAuthenticated>
     <SectionMain>
-      <SectionTitleLineWithButton :icon="mdiBallotOutline" title="Create New Request" main>
+      <SectionTitleLineWithButton :icon="mdiBookOutline" title="Crear Nueva Solicitud de Libro" main>
       </SectionTitleLineWithButton>
-      <CardBox form @submit.prevent="submit">
-        <FormField label="Cover">
-          <FormControl v-model="form.imageUrl" type="text" placeholder="Image URL (or upload a file)" />
-          <input type="file" @change="e => form.imageFile = e.target.files[0]" class="mt-2" />
-        </FormField>
-        <FormField label="Format">
-          <FormControl v-model="form.format" type="text" placeholder="E-book" />
-        </FormField>
-        <FormField label="File">
-          <input type="file" @change="e => form.file = e.target.files[0]" class="mt-2" />
-        </FormField>
+      <CardBox form @submit.prevent="submit" class="max-w-3xl mx-auto">
+        <div v-if="submitError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+          <strong class="font-bold">Error!</strong>
+          <span class="block sm:inline">{{ submitError }}</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField label="Imagen de Portada" :error="errors.imageFile">
+            <FormFilePicker v-model="form.imageFile" @update:modelValue="handleImageChange" accept="image/*" />
+            <div v-if="imagePreview" class="flex justify-center mt-2">
+              <img :src="imagePreview" alt="Vista previa de portada" class="max-w-full h-40 object-contain" />
+            </div>
+            <p v-if="imageLoading" class="mt-1 text-sm text-blue-600">Subiendo imagen...</p>
+          </FormField>
+          <FormField label="Archivo EPUB" :error="errors.file">
+            <FormFilePicker v-model="form.file" @update:modelValue="handleFileChange" accept=".epub" />
+            <p v-if="fileLoading" class="mt-1 text-sm text-blue-600">Subiendo archivo...</p>
+          </FormField>
+        </div>
         <BaseDivider />
-        <FormField label="ISBN">
-          <FormControl v-model="form.isbn" type="text" placeholder="9788498450569" />
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField label="Título" :error="errors.title">
+            <FormControl v-model="form.title" type="text" placeholder="Título del libro" />
+          </FormField>
+          <FormField label="ISBN" :error="errors.isbn">
+            <FormControl v-model="form.isbn" type="text" placeholder="ISBN" />
+          </FormField>
+          <FormField label="Categoría">
+            <select v-model="form.category" @change="(e) => handleSelectionChange(e, 'category')" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+              <option value="">Selecciona una categoría</option>
+              <option v-for="category in categories" :key="category.id" :value="category.id">
+                {{ category.name }}
+              </option>
+              <option value="new">Añadir nueva categoría</option>
+            </select>
+            <div v-if="showNewInput.category" class="mt-2">
+              <FormControl v-model="newEntry.category" type="text" placeholder="Nueva categoría" @keyup.enter="() => addNewEntry('category')" />
+              <BaseButton class="mt-2" color="info" label="Añadir" @click="() => addNewEntry('category')" />
+            </div>
+          </FormField>
+          <FormField label="Autor" :error="errors.author">
+            <select v-model="form.author" @change="(e) => handleSelectionChange(e, 'author')" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+              <option value="">Selecciona un autor</option>
+              <option v-for="author in authors" :key="author.id" :value="author.id">
+                {{ author.name }}
+              </option>
+              <option value="new">Añadir nuevo autor</option>
+            </select>
+            <div v-if="showNewInput.author" class="mt-2">
+              <FormControl v-model="newEntry.author" type="text" placeholder="Nuevo autor" @keyup.enter="() => addNewEntry('author')" />
+              <BaseButton class="mt-2" color="info" label="Añadir" @click="() => addNewEntry('author')" />
+            </div>
+          </FormField>
+          <FormField label="Editorial" :error="errors.publisher">
+            <FormControl v-model="form.publisher" type="text" placeholder="Nombre de la editorial" />
+          </FormField>
+          <FormField label="Idioma" :error="errors.language">
+            <select v-model="form.language" @change="(e) => handleSelectionChange(e, 'language')" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+              <option value="">Selecciona un idioma</option>
+              <option v-for="language in languages" :key="language.id" :value="language.id">
+                {{ language.name }}
+              </option>
+              <option value="new">Añadir nuevo idioma</option>
+            </select>
+            <div v-if="showNewInput.language" class="mt-2">
+              <FormControl v-model="newEntry.language" type="text" placeholder="Nuevo idioma" @keyup.enter="() => addNewEntry('language')" />
+              <BaseButton class="mt-2" color="info" label="Añadir" @click="() => addNewEntry('language')" />
+            </div>
+          </FormField>
+          <FormField label="Precio Regular ($)" :error="errors.regularPrice">
+            <FormControl v-model.number="form.regularPrice" type="number" step="0.01" min="0" placeholder="Precio regular" />
+          </FormField>
+          <FormField label="Precio de Oferta ($)" :error="errors.salePrice">
+            <FormControl v-model.number="form.salePrice" type="number" step="0.01" min="0" placeholder="Precio de oferta (opcional)" />
+          </FormField>
+        </div>
+        <FormField label="Descripción Corta" :error="errors.shortDescription">
+          <FormControl v-model="form.shortDescription" type="textarea" placeholder="Breve descripción del libro" />
         </FormField>
-        <FormField label="Title">
-          <FormControl v-model="form.title" type="text" placeholder="Frankenstein Prueba Admin" />
-        </FormField>
-        <FormField label="Category">
-          <FormControl v-model="form.category" type="text" placeholder="190" />
-        </FormField>
-        <FormField label="Author">
-          <FormControl v-model="form.author" type="text" placeholder="Mary Wollstonecraft Shelley" />
-        </FormField>
-        <FormField label="Publisher">
-          <FormControl v-model="form.publisher" type="text" placeholder="ALGAR EDITORIAL" />
-        </FormField>
-        <FormField label="Language">
-          <FormControl v-model="form.language" type="text" placeholder="Español" />
-        </FormField>
-        <FormField label="Regular Price ($)">
-          <FormControl v-model="form.regularPrice" type="text" placeholder="10" />
-        </FormField>
-        <FormField label="Sale Price ($)">
-          <FormControl v-model="form.salePrice" type="text" placeholder="8" />
-        </FormField>
-        <FormField label="Short Description">
-          <FormControl v-model="form.shortDescription" type="textarea" placeholder="En la novela, el Monstruo aparece como una criatura humanoide de enorme estatura." />
-        </FormField>
-        <FormField label="Description">
-          <FormControl v-model="form.description" type="textarea" placeholder="En la novela, el Monstruo aparece como una criatura humanoide de enorme estatura." />
+        <FormField label="Descripción Completa">
+          <FormControl v-model="form.description" type="textarea" placeholder="Descripción completa del libro" />
         </FormField>
         <template #footer>
           <BaseButtons>
-            <BaseButton v-if="!loading" @click="submit" color="success" label="Save" />
-            <BaseButton v-if="loading" color="success" label="Saving..." disabled />
-            <BaseButton @click="cancel" color="danger" label="Cancel" />
+            <BaseButton v-if="!loading" type="submit" color="info" label="Enviar Solicitud" @click="submit" />
+            <BaseButton v-if="loading" color="info" label="Enviando..." disabled />
+            <BaseButton @click="cancel" color="danger" label="Cancelar" outline />
           </BaseButtons>
         </template>
       </CardBox>

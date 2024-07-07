@@ -146,6 +146,7 @@ onMounted(async () => {
   await fetchBooks();
 });
 </script>
+
 <template>
   <div>
     <CardBoxModal v-model="isModalDangerActive" title="Por favor confirme" button="danger" has-cancel @confirm="confirmUpdateStatus">
@@ -178,7 +179,7 @@ onMounted(async () => {
       </div>
       <div>
         <label class="mr-2">Categoría:</label>
-        <select v-model="selectedCategory" class="border rounded p-2 pr-10">
+        <select v-model="selectedCategory" class="border rounded p-2 pr-10 bg-transparent">
           <option value="all">Todas</option>
           <option v-for="category in categories" :key="category.id" :value="category.id">
             {{ category.name }}
@@ -206,7 +207,7 @@ onMounted(async () => {
       <div v-else>
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           <CardBox v-for="book in paginatedBooks" :key="book.id" class="flex flex-col items-center h-full border rounded-lg p-4">
-            <img :src="book.images[0]?.src" alt="Book cover" class="h-48 w-32 object-cover mb-4" />
+            <img :src="book.images[0]?.src || 'default-cover.jpg'" alt="Book cover" class="h-48 w-32 object-cover mb-4" />
             <h2 class="text-lg font-semibold mb-2 text-center truncate w-full">
               {{ book.name }}
             </h2>

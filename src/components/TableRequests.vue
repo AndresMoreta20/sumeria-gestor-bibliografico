@@ -2,11 +2,13 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { fetchRequests, deleteRequest } from '@/api/firebase';
+import { fetchCategoryById, fetchAuthorById, fetchLanguageById, fetchPublisherById } from '@/api/woocommerce';
 import FormControl from '@/components/FormControl.vue';
 import LoadingIndicator from '@/components/LoadingIndicator.vue';
 import CardBoxModal from '@/components/CardBoxModal.vue';
 import BaseButtons from '@/components/BaseButtons.vue';
 import BaseButton from '@/components/BaseButton.vue';
+import BaseIcon from '@/components/BaseIcon.vue';
 import { mdiEye, mdiTrashCan, mdiCheckCircle } from '@mdi/js';
 
 const router = useRouter();
@@ -18,13 +20,30 @@ const isModalDangerActive = ref(false);
 const isSuccessModalActive = ref(false);
 const requestToDelete = ref(null);
 
-// Estado para la paginación
 const currentPage = ref(1);
 const requestsPerPage = 8;
+
+const loadWooCommerceData = async (request) => {
+  try {
+    console.log(`Fetching WooCommerce data for request: ${JSON.stringify(request)}`);
+    request.categoryName = await fetchCategoryById(request.category).then(res => res.name);
+    request.authorName = await fetchAuthorById(request.author).then(res => res.name);
+    request.languageName = await fetchLanguageById(request.language).then(res => res.name);
+    request.publisherName = await fetchPublisherById(request.publisher).then(res => res.name);
+    console.log(`Fetched WooCommerce data: ${JSON.stringify(request)}`);
+  } catch (error) {
+    console.error('Error fetching WooCommerce data:', error);
+  }
+};
 
 const loadRequests = async () => {
   try {
     requests.value = await fetchRequests();
+    console.log(`Fetched requests: ${JSON.stringify(requests.value)}`);
+
+    for (const request of requests.value) {
+      await loadWooCommerceData(request);
+    }
   } catch (error) {
     console.error('Error fetching requests:', error);
   } finally {
@@ -36,7 +55,7 @@ const filteredRequests = computed(() => {
   let filtered = requests.value;
   
   if (selectedCategory.value !== "all") {
-    filtered = filtered.filter(request => request.category === selectedCategory.value);
+    filtered = filtered.filter(request => request.categoryName === selectedCategory.value);
   }
   
   if (searchQuery.value) {
@@ -48,14 +67,12 @@ const filteredRequests = computed(() => {
   return filtered;
 });
 
-// Cálculo de las solicitudes que se mostrarán en la página actual
 const paginatedRequests = computed(() => {
   const start = (currentPage.value - 1) * requestsPerPage;
   const end = start + requestsPerPage;
   return filteredRequests.value.slice(start, end);
 });
 
-// Calcular el número total de páginas
 const totalPages = computed(() => Math.ceil(filteredRequests.value.length / requestsPerPage));
 
 const goToNewRequest = () => {
@@ -87,8 +104,9 @@ const goToPage = (pageNumber) => {
 
 onMounted(loadRequests);
 </script>
+
 <template>
-  <div>
+  <div class="mt-2 mx-10 mb-10">
     <CardBoxModal v-model="isModalDangerActive" title="Por favor confirme" button="danger" has-cancel @confirm="confirmDeleteRequest">
       <p>¿Está seguro de que desea eliminar esta solicitud?</p>
     </CardBoxModal>
@@ -111,7 +129,7 @@ onMounted(loadRequests);
     <div class="flex justify-between items-center mb-6">
       <div>
         <label class="mr-2">Categoría:</label>
-        <select v-model="selectedCategory" class="border rounded p-2 pr-10">
+        <select v-model="selectedCategory" class="border rounded p-2 pr-10 bg-transparent">
           <option value="all">Todas</option>
           <!-- Agregar opciones para filtrar por categoría si es necesario -->
         </select>
@@ -125,13 +143,26 @@ onMounted(loadRequests);
       <div v-else>
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           <CardBox v-for="request in paginatedRequests" :key="request.id" class="flex flex-col items-center h-full border rounded-lg p-4">
-            <img :src="request.imageUrl" alt="Book cover" class="h-48 w-32 object-cover mb-4">
+            <img :src="request.coverUrl" alt="Book cover" class="h-48 w-32 object-cover mb-4">
             <h2 class="text-lg font-semibold mb-2 text-center truncate w-full">{{ request.title }}</h2>
-            <p class="text-blue-500 mb-2">{{ request.regularPrice }}</p>
-            <p class="text-gray-500 mb-4">{{ request.category }}</p>
+            <p class="text-blue-500 mb-2">$ {{ request.regularPrice }}</p>
+            <div class="text-gray-500 mb-2">
+              <strong>Categoría:</strong> {{ request.categoryName }}
+            </div>
+            <div class="text-gray-500 mb-2">
+              <strong>Autor:</strong> {{ request.authorName }}
+            </div>
+            <div class="text-gray-500 mb-4">
+              <strong>Idioma:</strong> {{ request.languageName }}
+            </div>
+            <div class="text-gray-500 mb-4">
+              <strong>Editorial:</strong> {{ request.publisherName }}
+            </div>
             <div class="mt-auto flex justify-between w-full">
               <button @click="() => router.push({ name: 'requestForm', params: { id: request.id } })" class="bg-gray-300 text-black py-2 px-4 rounded w-full mr-2">Editar</button>
-              <button @click="openDeleteModal(request.id)" class="bg-red-500 text-white py-2 px-4 rounded w-full">Eliminar</button>
+              <button @click="openDeleteModal(request.id)" class="bg-red-500 text-white py-2 px-4 rounded w-full">
+                <BaseIcon :path="mdiTrashCan" />
+              </button>
             </div>
           </CardBox>
         </div>

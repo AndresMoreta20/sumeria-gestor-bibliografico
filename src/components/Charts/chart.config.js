@@ -24,14 +24,17 @@ const datasetObject = (color, data) => {
   };
 };
 
-export const generateChartData = (data) => {
+export const generateChartData = (data, label, key) => {
   const labels = data.map((item) => item.date || item.created_at || item.label);
-  const dataset = data.map(
-    (item) => item.total_sales || item.orders_count || item.value
-  );
+  const dataset = data.map((item) => item[key]);
 
   return {
     labels,
-    datasets: [datasetObject("primary", dataset)],
+    datasets: [
+      {
+        label: label,
+        ...datasetObject("primary", dataset),
+      },
+    ],
   };
 };

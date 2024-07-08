@@ -1,3 +1,4 @@
+<!-- DataTableView.vue -->
 <script setup>
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
@@ -11,7 +12,7 @@ import LoadingIndicator from '@/components/LoadingIndicator.vue'
 const props = defineProps({
   endpoint: {
     type: String,
-    required: true
+    required: false
   },
   title: {
     type: String,
@@ -48,22 +49,18 @@ const data = ref([])
 const loading = ref(true)
 const error = ref(null)
 
-const consumerKey = import.meta.env.VITE_APP_CONSUMER_KEY
-const consumerSecret = import.meta.env.VITE_APP_CONSUMER_SECRET
-
 const fetchData = async () => {
   loading.value = true
   error.value = null
 
   try {
-    let response
     if (props.dataFetchFunction) {
       data.value = await props.dataFetchFunction()
-    } else {
-      response = await axios.get(props.endpoint, {
+    } else if (props.endpoint) {
+      const response = await axios.get(props.endpoint, {
         auth: {
-          username: consumerKey,
-          password: consumerSecret
+          username: import.meta.env.VITE_APP_CONSUMER_KEY,
+          password: import.meta.env.VITE_APP_CONSUMER_SECRET
         }
       })
       data.value = response.data

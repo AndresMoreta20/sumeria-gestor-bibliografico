@@ -141,6 +141,14 @@ const routeDefinitions = [
     title: "Nueva Solicitud",
   },
   {
+    path: "/requestDetailView/:id",
+    name: "requestDetailView",
+    componentPath: "RequestDetailView",
+    props: true,
+    requiresAuth: true,
+    title: "Revisar Solicitud",
+  },
+  {
     path: "/newBook",
     name: "newBook",
     componentPath: "BookForm",

@@ -171,7 +171,7 @@ onMounted(async () => {
     <div class="flex justify-between items-center mb-6">
       <div>
         <label class="mr-2">Formato:</label>
-        <select v-model="selectedFormat" class="border rounded p-2 pr-10">
+        <select v-model="selectedFormat" class="border rounded p-2 pr-10 bg-transparent">
           <option value="all">Todos</option>
           <option value="physical">Físicos</option>
           <option value="digital">eBook</option>
@@ -192,7 +192,7 @@ onMounted(async () => {
           v-model="showAvailable"
           name="availability-switch"
           type="switch"
-          label="Disponibilidad"
+          label=""
           :input-value="true"
         />
       </div>
@@ -212,6 +212,7 @@ onMounted(async () => {
               {{ book.name }}
             </h2>
             <p class="text-blue-500 mb-2">${{ book.price }}</p>
+            <p v-if="book.virtual != true" class="text-blue-500 mb-2">Stock: {{ book.stock_quantity }}</p>
             <p class="text-gray-500 mb-2">{{ book.categories[0]?.name }}</p>
             <p class="text-gray-500 mb-4">
               {{

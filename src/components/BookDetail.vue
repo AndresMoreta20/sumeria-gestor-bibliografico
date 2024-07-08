@@ -49,6 +49,7 @@ onMounted(fetchBookDetails);
       <h2 class="text-2xl font-semibold mb-4">{{ book?.name }}</h2>
       <img :src="book?.images[0]?.src" alt="Book cover" class="h-48 w-32 object-cover mb-4"/>
       <p><strong>Precio:</strong> ${{ book?.price }}</p>
+      <p v-if="book?.virtual != true"><strong>Stock:</strong> {{ book?.stock_quantity }}</p>
       <p><strong>Descripción:</strong> <span v-html="book?.description"></span></p>
       <p><strong>Categoría:</strong> {{ book?.categories[0]?.name }}</p>
       <p><strong>Formato:</strong> {{ book?.attributes.find(attr => attr.name === 'Formato')?.options[0] }}</p>

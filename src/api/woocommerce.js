@@ -1,4 +1,4 @@
-// woocommerce.js
+// api/woocommerce.js
 import axios from "axios";
 
 const apiClient = axios.create({
@@ -57,6 +57,35 @@ export const fetchCategoryById = async (id) => {
     return response.data;
   } catch (error) {
     console.error(`Error fetching category by ID (${id}):`, error);
+    throw error;
+  }
+};
+
+export const createCategory = async (name) => {
+  try {
+    const response = await apiClient.post(
+      "/products/categories",
+      { name },
+      {
+        auth: getAuth().auth,
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error creating category:", error);
+    throw error;
+  }
+};
+
+export const fetchCategoryByName = async (name) => {
+  try {
+    const response = await apiClient.get("/products/categories", {
+      params: { search: name },
+      auth: getAuth().auth,
+    });
+    return response.data.length > 0 ? response.data[0] : null;
+  } catch (error) {
+    console.error("Error fetching category by name:", error);
     throw error;
   }
 };

@@ -133,6 +133,10 @@ const toggleShowRejectedRequests = () => {
   }
 };
 
+const appealRequest = (requestId) => {
+  router.push({ name: 'requestForm', query: { appeal: true, id: requestId } });
+};
+
 onMounted(loadRequests);
 </script>
 
@@ -198,6 +202,9 @@ onMounted(loadRequests);
               <!-- <button @click="() => router.push({ name: 'requestForm', params: { id: request.id } })" class="bg-gray-300 text-black py-2 px-4 rounded w-full mr-2">Editar</button>--> 
               <button @click="openDeleteModal(request.id)" class="bg-red-500 text-white py-2 px-4 rounded w-full">
                 <BaseIcon :path="mdiTrashCan" />
+              </button>
+              <button v-if="showRejectedRequests" @click="appealRequest(request.id)" class="bg-yellow-500 text-white py-2 px-4 rounded w-full ml-2">
+                Apelar
               </button>
             </div>
           </CardBox>

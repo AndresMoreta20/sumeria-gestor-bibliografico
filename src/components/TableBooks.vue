@@ -54,7 +54,7 @@ const filteredBooks = computed(() => {
     );
   }
 
-  let booksByAvailability = booksByCategory.filter(book => book.status === (showAvailable.value ? "publish" : "private"));
+  let booksByAvailability = booksByCategory.filter(book => book.status === (showAvailable.value ? "publish" : "trash"));
 
   if (searchQuery.value) {
     booksByAvailability = booksByAvailability.filter(book =>

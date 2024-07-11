@@ -14,15 +14,21 @@ import {
 } from "@mdi/js";
 import { logout } from "@/services/auth.js";
 
+const userRole = sessionStorage.getItem("user-role");
+
 export default [
   {
     isCurrentUser: true,
     menu: [
-      {
-        icon: mdiKey,
-        label: "Change Password",
-        to: "/profile",
-      },
+      ...(userRole === "publisher"
+        ? [
+            {
+              icon: mdiKey,
+              label: "Change Password",
+              to: "/profile",
+            },
+          ]
+        : []),
       {
         icon: mdiLogout,
         label: "Logout",

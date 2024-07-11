@@ -211,9 +211,9 @@ onMounted(async () => {
                   :input-value="true"
                 />
               </div>
-              <button @click="goToNewBook" class="bg-blue-500 text-white p-2 rounded">
+              <!-- <button @click="goToNewBook" class="bg-blue-500 text-white p-2 rounded">
                 Nuevo Libro
-              </button>
+              </button> -->
             </div>
             <div class="relative">
               <div v-if="loading || categoriesLoading" class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10">

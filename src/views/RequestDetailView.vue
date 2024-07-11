@@ -278,8 +278,13 @@ const rejectRequest = async () => {
   submitError.value = null;
 
   try {
-    await rejectRequestFirebase({...form, id: requestId});
-    router.push('/requestsAdmin');
+    const comment = prompt('Por favor, ingrese una razón para el rechazo:');
+    if (comment !== null && comment.trim() !== '') {
+      await rejectRequestFirebase(requestId, comment);
+      router.push('/requestsAdmin');
+    } else {
+      submitError.value = 'Rechazo cancelado: No se proporcionó un comentario.';
+    }
   } catch (error) {
     console.error('Error rejecting request:', error);
     submitError.value = 'Error rejecting request';

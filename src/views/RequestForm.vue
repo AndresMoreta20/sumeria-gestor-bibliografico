@@ -1,377 +1,223 @@
-<template>
-  <LayoutAuthenticated>
-    <SectionMain>
-      <SectionTitleLineWithButton :icon="mdiBookOutline" title="Crear Nueva Solicitud de Libro" main>
-      </SectionTitleLineWithButton>
-      <CardBox form @submit.prevent="submit" class="max-w-3xl mx-auto">
-        <div v-if="submitError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-          <strong class="font-bold">Error!</strong>
-          <span class="block sm:inline">{{ submitError }}</span>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField label="Imagen de Portada" :error="errors.imageFile">
-            <FormFilePicker v-model="form.imageFile" @update:modelValue="handleImageChange" accept="image/*" />
-            <div v-if="imagePreview" class="flex justify-center mt-2">
-              <img :src="imagePreview" alt="Vista previa de portada" class="max-w-full h-40 object-contain" />
-            </div>
-            <p v-if="imageLoading" class="mt-1 text-sm text-blue-600">Subiendo imagen...</p>
-          </FormField>
-          <FormField label="Archivo EPUB" :error="errors.file">
-            <FormFilePicker v-model="form.file" @update:modelValue="handleFileChange" accept=".epub" />
-            <p v-if="fileLoading" class="mt-1 text-sm text-blue-600">Subiendo archivo...</p>
-          </FormField>
-        </div>
-        <BaseDivider />
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField label="Título" :error="errors.title">
-            <FormControl v-model="form.title" type="text" placeholder="Título del libro" />
-          </FormField>
-          <FormField label="ISBN" :error="errors.isbn">
-            <FormControl v-model="form.isbn" type="text" placeholder="ISBN" />
-          </FormField>
-          <FormField label="Categoría">
-            <select v-model="form.category" @change="(e) => handleSelectionChange(e, 'category')" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-              <option value="">Selecciona una categoría</option>
-              <option v-for="category in categories" :key="category.id" :value="category.id">
-                {{ category.name }}
-              </option>
-              <option value="new">Añadir nueva categoría</option>
-            </select>
-            <div v-if="showNewInput.category" class="mt-2">
-              <FormControl v-model="newEntry.category" type="text" placeholder="Nueva categoría" @keyup.enter="() => addNewEntry('category')" />
-              <BaseButton class="mt-2" color="info" label="Añadir" @click="() => addNewEntry('category')" />
-            </div>
-          </FormField>
-          <FormField label="Autor" :error="errors.author">
-            <select v-model="form.author" @change="(e) => handleSelectionChange(e, 'author')" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-              <option value="">Selecciona un autor</option>
-              <option v-for="author in authors" :key="author.id" :value="author.id">
-                {{ author.name }}
-              </option>
-              <option value="new">Añadir nuevo autor</option>
-            </select>
-            <div v-if="showNewInput.author" class="mt-2">
-              <FormControl v-model="newEntry.author" type="text" placeholder="Nuevo autor" @keyup.enter="() => addNewEntry('author')" />
-              <BaseButton class="mt-2" color="info" label="Añadir" @click="() => addNewEntry('author')" />
-            </div>
-          </FormField>
-          <FormField label="Editorial" :error="errors.publisher">
-            <FormControl v-model="form.publisher" type="text" placeholder="Nombre de la editorial" />
-          </FormField>
-          <FormField label="Idioma" :error="errors.language">
-            <select v-model="form.language" @change="(e) => handleSelectionChange(e, 'language')" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-              <option value="">Selecciona un idioma</option>
-              <option v-for="language in languages" :key="language.id" :value="language.id">
-                {{ language.name }}
-              </option>
-              <option value="new">Añadir nuevo idioma</option>
-            </select>
-            <div v-if="showNewInput.language" class="mt-2">
-              <FormControl v-model="newEntry.language" type="text" placeholder="Nuevo idioma" @keyup.enter="() => addNewEntry('language')" />
-              <BaseButton class="mt-2" color="info" label="Añadir" @click="() => addNewEntry('language')" />
-            </div>
-          </FormField>
-          <FormField label="Precio Regular ($)" :error="errors.regularPrice">
-            <FormControl v-model.number="form.regularPrice" type="number" step="0.01" min="0" placeholder="Precio regular" />
-          </FormField>
-        </div>
-        <FormField label="Descripción Corta" :error="errors.shortDescription">
-          <FormControl v-model="form.shortDescription" type="textarea" placeholder="Breve descripción del libro" />
-        </FormField>
-        <FormField label="Descripción Completa">
-          <FormControl v-model="form.description" type="textarea" placeholder="Descripción completa del libro" />
-        </FormField>
-        <template #footer>
-          <BaseButtons>
-            <BaseButton v-if="!loading" type="submit" color="info" label="Enviar Solicitud" @click="submit" />
-            <BaseButton v-if="loading" color="info" label="Enviando..." disabled />
-            <BaseButton @click="cancel" color="danger" label="Cancelar" outline />
-          </BaseButtons>
-        </template>
-      </CardBox>
-    </SectionMain>
-  </LayoutAuthenticated>
-</template>
-
 <script setup>
-import { reactive, ref, watch, onMounted } from "vue";
-import { collection, addDoc, getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
-import {
-  getStorage,
-  ref as storageRef,
-  uploadBytes,
-  getDownloadURL,
-} from "firebase/storage";
-import SectionMain from "@/components/SectionMain.vue";
-import CardBox from "@/components/CardBox.vue";
-import FormField from "@/components/FormField.vue";
-import FormControl from "@/components/FormControl.vue";
-import FormFilePicker from "@/components/FormFilePicker.vue";
-import BaseDivider from "@/components/BaseDivider.vue";
-import BaseButton from "@/components/BaseButton.vue";
-import BaseButtons from "@/components/BaseButtons.vue";
-import SectionTitleLineWithButton from "@/components/SectionTitleLineWithButton.vue";
-import LayoutAuthenticated from "@/layouts/LayoutAuthenticated.vue";
-import { useRouter } from "vue-router";
-import { mdiBookOutline } from "@mdi/js";
-import { fetchCategories, fetchAuthors, fetchLanguages } from "@/api/woocommerce";
+import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { fetchRequests, deleteRequest, fetchRejectedRequests } from '@/api/firebase';
+import { fetchCategoryById, fetchAuthorById, fetchLanguageById, fetchPublisherById } from '@/api/woocommerce';
+import FormControl from '@/components/FormControl.vue';
+import LoadingIndicator from '@/components/LoadingIndicator.vue';
+import CardBoxModal from '@/components/CardBoxModal.vue';
+import BaseButtons from '@/components/BaseButtons.vue';
+import BaseButton from '@/components/BaseButton.vue';
+import BaseIcon from '@/components/BaseIcon.vue';
+import { mdiEye, mdiTrashCan, mdiCheckCircle } from '@mdi/js';
 
 const router = useRouter();
+const requests = ref([]);
+const rejectedRequests = ref([]);
+const loading = ref(true);
+const selectedCategory = ref("all");
+const searchQuery = ref('');
+const isModalDangerActive = ref(false);
+const isSuccessModalActive = ref(false);
+const requestToDelete = ref(null);
+const showRejectedRequests = ref(false);
 
-const categories = ref([]);
-const authors = ref([]);
-const languages = ref([]);
-const newEntry = ref({ category: '', author: '', language: '' });
-const showNewInput = reactive({ category: false, author: false, language: false });
+const currentPage = ref(1);
+const requestsPerPage = 8;
 
-onMounted(async () => {
+const loadWooCommerceData = async (request) => {
   try {
-    const categoriesResponse = await fetchCategories();
-    categories.value = categoriesResponse.data;
-
-    const authorsResponse = await fetchAuthors();
-    authors.value = authorsResponse.data;
-
-    const languagesResponse = await fetchLanguages();
-    languages.value = languagesResponse.data;
-
-    form.publisher = sessionStorage.getItem('user-name') || '';
+    console.log(`Fetching WooCommerce data for request: ${JSON.stringify(request)}`);
+    request.categoryName = await fetchCategoryById(request.category).then(res => res.name);
+    request.authorName = await fetchAuthorById(request.author).then(res => res.name);
+    request.languageName = await fetchLanguageById(request.language).then(res => res.name);
+    request.publisherName = await fetchPublisherById(request.publisher).then(res => res.name);
+    console.log(`Fetched WooCommerce data: ${JSON.stringify(request)}`);
   } catch (error) {
-    console.error("Error fetching data:", error);
-  }
-});
-
-const handleSelectionChange = (event, type) => {
-  if (event.target.value === 'new') {
-    showNewInput[type] = true;
-    form[type] = '';
-    errors[type] = ''; // Limpiar el mensaje de error cuando se selecciona "Añadir nuevo"
-  } else {
-    showNewInput[type] = false;
-    form[type] = event.target.value;
+    console.error('Error fetching WooCommerce data:', error);
   }
 };
 
-const addNewEntry = (type) => {
-  if (newEntry.value[type].trim() !== '') {
-    form[type] = newEntry.value[type].trim();
-    if (type === 'category') {
-      categories.value.push({ id: form[type], name: form[type] });
-    } else if (type === 'author') {
-      authors.value.push({ id: form[type], name: form[type] });
-    } else if (type === 'language') {
-      languages.value.push({ id: form[type], name: form[type] });
-    }
-    showNewInput[type] = false;
-    newEntry.value[type] = '';
-  }
-};
-
-const form = reactive({
-  title: "",
-  format: "E-book",
-  file: null,
-  isbn: "",
-  category: "",
-  author: "",
-  publisher: "",
-  language: "",
-  regularPrice: "",
-  shortDescription: "",
-  description: "",
-  imageFile: null,
-  stockQuantity: 100,
-  sku: "",
-});
-
-const loading = ref(false);
-const imageLoading = ref(false);
-const fileLoading = ref(false);
-const errors = reactive({});
-const imagePreview = ref(null);
-const submitError = ref(null);
-
-const generateSKU = () => {
-  const date = new Date();
-  const timestamp = date.getTime();
-  return `SKU${timestamp}`;
-};
-
-const validateISBN = (isbn) => {
-  isbn = isbn.replace(/[-\s]/g, "");
-  if (isbn.length !== 10 && isbn.length !== 13) return false;
-
-  let sum = 0;
-  if (isbn.length === 10) {
-    for (let i = 0; i < 9; i++) {
-      sum += (10 - i) * parseInt(isbn.charAt(i));
-    }
-    let checksum = 11 - (sum % 11);
-    if (checksum === 11) checksum = 0;
-    if (checksum === 10) checksum = "X";
-    return checksum.toString() === isbn.charAt(9).toUpperCase();
-  } else {
-    for (let i = 0; i < 12; i++) {
-      sum += (i % 2 === 0 ? 1 : 3) * parseInt(isbn.charAt(i));
-    }
-    let checksum = 10 - (sum % 10);
-    if (checksum === 10) checksum = 0;
-    return checksum.toString() === isbn.charAt(12);
-  }
-};
-
-const validateField = (field) => {
-  switch (field) {
-    case "title":
-      errors[field] = !form[field] ? "El título es requerido" : "";
-      break;
-    case "isbn":
-      errors[field] = !form[field]
-        ? "El ISBN es requerido"
-        : !validateISBN(form[field])
-        ? "El ISBN no es válido"
-        : "";
-      break;
-    case "author":
-      errors[field] = !form[field] && !showNewInput.author ? "El autor es requerido" : "";
-      break;
-    case "publisher":
-      errors[field] = !form[field] ? "La editorial es requerida" : "";
-      break;
-    case "language":
-      errors[field] = !form[field] && !showNewInput.language ? "El idioma es requerido" : "";
-      break;
-    case "regularPrice":
-      errors[field] =
-        !form[field] || isNaN(form[field]) || form[field] < 0
-          ? "Se requiere un precio regular válido y no negativo"
-          : "";
-      break;
-    case "shortDescription":
-      errors[field] = !form[field] ? "La descripción corta es requerida" : "";
-      break;
-    case "imageFile":
-      errors[field] = !form[field] ? "La imagen de portada es requerida" : "";
-      break;
-    case "file":
-      errors[field] = !form[field]
-        ? "El archivo EPUB es requerido"
-        : form[field] && !form[field].name.endsWith(".epub")
-        ? "El archivo debe estar en formato EPUB"
-        : "";
-      break;
-  }
-};
-
-Object.keys(form).forEach((field) => {
-  watch(
-    () => form[field],
-    () => validateField(field)
-  );
-});
-
-const validateForm = () => {
-  Object.keys(form).forEach(validateField);
-  return Object.values(errors).every((error) => error === "");
-};
-
-const uploadFile = async (file, path) => {
-  const storage = getStorage();
-  const fileRef = storageRef(storage, path);
-  await uploadBytes(fileRef, file);
-  return getDownloadURL(fileRef);
-};
-
-const handleImageChange = (file) => {
-  form.imageFile = file;
-  errors.imageFile = "";
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    imagePreview.value = e.target.result;
-  };
-  reader.readAsDataURL(file);
-};
-
-const handleFileChange = (file) => {
-  if (file.name.endsWith(".epub")) {
-    form.file = file;
-    errors.file = "";
-  } else {
-    errors.file = "El archivo debe estar en formato EPUB";
-    form.file = null;
-  }
-};
-
-const submit = async () => {
-  submitError.value = null;
-
-  if (!validateForm()) {
-    return;
-  }
-
-  loading.value = true;
+const loadRequests = async () => {
   try {
-    const auth = getAuth();
-    const user = auth.currentUser;
+    requests.value = await fetchRequests();
+    console.log(`Fetched requests: ${JSON.stringify(requests.value)}`);
 
-    if (!user) {
-      submitError.value = "Debes estar conectado para enviar una solicitud";
-      return;
+    for (const request of requests.value) {
+      await loadWooCommerceData(request);
     }
-
-    const sku = generateSKU();
-
-    imageLoading.value = true;
-    const coverUrl = await uploadFile(
-      form.imageFile,
-      `covers/${sku}_${form.imageFile.name}`
-    );
-    imageLoading.value = false;
-
-    fileLoading.value = true;
-    const fileUrl = await uploadFile(
-      form.file,
-      `books/${sku}_${form.file.name}`
-    );
-    fileLoading.value = false;
-
-    const requestData = {
-      title: form.title,
-      format: form.format,
-      isbn: form.isbn,
-      category: form.category,
-      author: form.author,
-      publisher: form.publisher,
-      language: form.language,
-      regularPrice: parseFloat(form.regularPrice),
-      shortDescription: form.shortDescription,
-      description: form.description,
-      coverUrl,
-      fileUrl,
-      stockQuantity: form.stockQuantity,
-      sku,
-      status: "pending",
-      userEmail: user.email,
-      createdAt: new Date(),
-    };
-
-    const db = getFirestore();
-    const requestRef = collection(db, "bookRequests");
-    await addDoc(requestRef, requestData);
-
-    alert("Solicitud enviada con éxito");
-    router.push("/requests");
   } catch (error) {
-    submitError.value = "Error al crear la solicitud: " + error.message;
+    console.error('Error fetching requests:', error);
   } finally {
     loading.value = false;
-    imageLoading.value = false;
-    fileLoading.value = false;
   }
 };
 
-const cancel = () => {
-  router.push("/requests");
+const loadRejectedRequests = async () => {
+  try {
+    rejectedRequests.value = await fetchRejectedRequests();
+    console.log(`Fetched rejected requests: ${JSON.stringify(rejectedRequests.value)}`);
+
+    for (const request of rejectedRequests.value) {
+      await loadWooCommerceData(request);
+    }
+  } catch (error) {
+    console.error('Error fetching rejected requests:', error);
+  } finally {
+    loading.value = false;
+  }
 };
+
+const filteredRequests = computed(() => {
+  let filtered = showRejectedRequests.value ? rejectedRequests.value : requests.value;
+  
+  // Obtener el email del usuario desde sessionStorage
+  const userEmail = sessionStorage.getItem('user-email');
+  const userName = sessionStorage.getItem('user-name');
+
+  // Filtrar las solicitudes por userEmail o publisher
+  filtered = filtered.filter(request => request.userEmail === userEmail || request.publisher === userName);
+  
+  if (selectedCategory.value !== "all") {
+    filtered = filtered.filter(request => request.categoryName === selectedCategory.value);
+  }
+  
+  if (searchQuery.value) {
+    filtered = filtered.filter(request =>
+      request.title.toLowerCase().includes(searchQuery.value.toLowerCase())
+    );
+  }
+  
+  return filtered;
+});
+
+const paginatedRequests = computed(() => {
+  const start = (currentPage.value - 1) * requestsPerPage;
+  const end = start + requestsPerPage;
+  return filteredRequests.value.slice(start, end);
+});
+
+const totalPages = computed(() => Math.ceil(filteredRequests.value.length / requestsPerPage));
+
+const goToNewRequest = () => {
+  router.push({ name: 'requestForm' });
+};
+
+const confirmDeleteRequest = async () => {
+  if (requestToDelete.value) {
+    try {
+      await deleteRequest(requestToDelete.value);
+      requests.value = requests.value.filter(request => request.id !== requestToDelete.value);
+      isSuccessModalActive.value = true;
+    } catch (error) {
+      console.error('Error deleting request:', error);
+    } finally {
+      isModalDangerActive.value = false;
+    }
+  }
+};
+
+const openDeleteModal = (requestId) => {
+  requestToDelete.value = requestId;
+  isModalDangerActive.value = true;
+};
+
+const goToPage = (pageNumber) => {
+  currentPage.value = pageNumber;
+};
+
+const toggleShowRejectedRequests = () => {
+  showRejectedRequests.value = !showRejectedRequests.value;
+  if (showRejectedRequests.value && rejectedRequests.value.length === 0) {
+    loadRejectedRequests();
+  }
+};
+
+onMounted(() => {
+  loadRequests();
+  if (showRejectedRequests.value) {
+    loadRejectedRequests();
+  }
+});
 </script>
+
+<template>
+  <div class="mt-2 mx-10 mb-10">
+    <CardBoxModal v-model="isModalDangerActive" title="Por favor confirme" button="danger" has-cancel @confirm="confirmDeleteRequest">
+      <p>¿Está seguro de que desea eliminar esta solicitud?</p>
+    </CardBoxModal>
+
+    <CardBoxModal v-model="isSuccessModalActive" title="Éxito" button="success">
+      <div class="flex items-center space-x-2">
+        <BaseIcon :path="mdiCheckCircle" class="text-green-500" />
+        <p>La solicitud se ha eliminado correctamente.</p>
+      </div>
+    </CardBoxModal>
+
+    <div class="flex justify-between items-center mb-6">
+      <div class="relative w-full">
+        <FormControl v-model="searchQuery" placeholder="Buscar" transparent borderless class="pl-10 w-full" />
+        <svg class="absolute top-1/2 left-3 transform -translate-y-1/2 h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M9 2C4.58172 2 1 5.58172 1 10C1 14.4183 4.58172 18 9 18C11.0861 18 13.0004 17.2078 14.4266 15.9131L19.7071 21.1924C19.9871 21.4724 20.4871 21.4724 20.7671 21.1924C21.0471 20.9124 21.0471 20.4124 20.7671 20.1324L15.4866 14.853C16.7914 13.4313 17.5 11.5456 17.5 10C17.5 5.58172 14.4183 2 9 2ZM9 4C12.3137 4 15 6.68629 15 10C15 13.3137 12.3137 16 9 16C5.68629 16 3 13.3137 3 10C3 6.68629 5.68629 4 9 4Z"/>
+        </svg>
+      </div>
+    </div>
+    <div class="flex justify-between items-center mb-6">
+      <div>
+        <label class="mr-2">Categoría:</label>
+        <select v-model="selectedCategory" class="border rounded p-2 pr-10 bg-transparent">
+          <option value="all">Todas</option>
+          <!-- Agregar opciones para filtrar por categoría si es necesario -->
+        </select>
+      </div>
+      <div class="flex items-center space-x-4">
+        <label for="toggle-show-rejected" class="mr-2">Mostrar rechazadas:</label>
+        <input type="checkbox" id="toggle-show-rejected" v-model="showRejectedRequests" @change="toggleShowRejectedRequests" class="form-checkbox h-5 w-5 text-blue-600">
+        <button @click="goToNewRequest" class="bg-blue-500 text-white p-2 rounded">Nueva Solicitud</button>
+      </div>
+    </div>
+    <div class="relative">
+      <div v-if="loading" class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10">
+        <LoadingIndicator />
+      </div>
+      <div v-else>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <CardBox v-for="request in paginatedRequests" :key="request.id" class="flex flex-col items-center h-full border rounded-lg p-4">
+            <img :src="request.coverUrl" alt="Book cover" class="h-48 w-32 object-cover mb-4">
+            <h2 class="text-lg font-semibold mb-2 text-center truncate w-full">{{ request.title }}</h2>
+            <p class="text-blue-500 mb-2">$ {{ request.regularPrice }}</p>
+            <div class="text-gray-500 mb-2">
+              <strong>Categoría:</strong> {{ request.categoryName }}
+            </div>
+            <div class="text-gray-500 mb-2">
+              <strong>Autor:</strong> {{ request.authorName }}
+            </div>
+            <div class="text-gray-500 mb-4">
+              <strong>Idioma:</strong> {{ request.languageName }}
+            </div>
+            <div class="text-gray-500 mb-4">
+              <strong>Editorial:</strong> {{ request.publisherName }}
+            </div>
+            <div class="mt-auto flex justify-between w-full">
+              <!-- <button @click="() => router.push({ name: 'requestForm', params: { id: request.id } })" class="bg-gray-300 text-black py-2 px-4 rounded w-full mr-2">Editar</button>--> 
+              <button @click="openDeleteModal(request.id)" class="bg-red-500 text-white py-2 px-4 rounded w-full">
+                <BaseIcon :path="mdiTrashCan" />
+              </button>
+            </div>
+          </CardBox>
+        </div>
+        <div class="mt-4 flex justify-center space-x-2">
+          <button
+            v-for="page in totalPages"
+            :key="page"
+            @click="goToPage(page)"
+            :class="{'bg-blue-500 text-white': page === currentPage, 'bg-gray-300 text-black': page !== currentPage}"
+            class="px-4 py-2 rounded"
+          >
+            {{ page }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>

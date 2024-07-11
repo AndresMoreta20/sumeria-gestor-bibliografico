@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { fetchRequests, deleteRequest } from '@/api/firebase';
+import { fetchRequests, deleteRequest, fetchRejectedRequests } from '@/api/firebase';
 import { fetchCategoryById, fetchAuthorById, fetchLanguageById, fetchPublisherById } from '@/api/woocommerce';
 import FormControl from '@/components/FormControl.vue';
 import LoadingIndicator from '@/components/LoadingIndicator.vue';
@@ -13,12 +13,14 @@ import { mdiEye, mdiTrashCan, mdiCheckCircle } from '@mdi/js';
 
 const router = useRouter();
 const requests = ref([]);
+const rejectedRequests = ref([]);
 const loading = ref(true);
 const selectedCategory = ref("all");
 const searchQuery = ref('');
 const isModalDangerActive = ref(false);
 const isSuccessModalActive = ref(false);
 const requestToDelete = ref(null);
+const showRejectedRequests = ref(false);
 
 const currentPage = ref(1);
 const requestsPerPage = 8;
@@ -51,8 +53,30 @@ const loadRequests = async () => {
   }
 };
 
+const loadRejectedRequests = async () => {
+  try {
+    rejectedRequests.value = await fetchRejectedRequests();
+    console.log(`Fetched rejected requests: ${JSON.stringify(rejectedRequests.value)}`);
+
+    for (const request of rejectedRequests.value) {
+      await loadWooCommerceData(request);
+    }
+  } catch (error) {
+    console.error('Error fetching rejected requests:', error);
+  } finally {
+    loading.value = false;
+  }
+};
+
 const filteredRequests = computed(() => {
-  let filtered = requests.value;
+  let filtered = showRejectedRequests.value ? rejectedRequests.value : requests.value;
+  
+  // Obtener el email del usuario desde sessionStorage
+  const userEmail = sessionStorage.getItem('user-email');
+  const userName = sessionStorage.getItem('user-name');
+
+  // Filtrar las solicitudes por userEmail o publisher
+  filtered = filtered.filter(request => request.userEmail === userEmail || request.publisher === userName);
   
   if (selectedCategory.value !== "all") {
     filtered = filtered.filter(request => request.categoryName === selectedCategory.value);
@@ -102,6 +126,13 @@ const goToPage = (pageNumber) => {
   currentPage.value = pageNumber;
 };
 
+const toggleShowRejectedRequests = () => {
+  showRejectedRequests.value = !showRejectedRequests.value;
+  if (showRejectedRequests.value && rejectedRequests.value.length === 0) {
+    loadRejectedRequests();
+  }
+};
+
 onMounted(loadRequests);
 </script>
 
@@ -134,7 +165,12 @@ onMounted(loadRequests);
           <!-- Agregar opciones para filtrar por categoría si es necesario -->
         </select>
       </div>
-      <button @click="goToNewRequest" class="bg-blue-500 text-white p-2 rounded">Nueva Solicitud</button>
+      <div class="flex items-center space-x-4">
+        <button @click="toggleShowRejectedRequests" class="bg-blue-500 text-white p-2 rounded">
+          {{ showRejectedRequests ? 'Mostrar Solicitudes Normales' : 'Mostrar Solicitudes Rechazadas' }}
+        </button>
+        <button @click="goToNewRequest" class="bg-blue-500 text-white p-2 rounded">Nueva Solicitud</button>
+      </div>
     </div>
     <div class="relative">
       <div v-if="loading" class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10">
@@ -159,7 +195,7 @@ onMounted(loadRequests);
               <strong>Editorial:</strong> {{ request.publisherName }}
             </div>
             <div class="mt-auto flex justify-between w-full">
-            <!-- Comment <button @click="() => router.push({ name: 'requestForm', params: { id: request.id } })" class="bg-gray-300 text-black py-2 px-4 rounded w-full mr-2">Editar</button>--> 
+              <!-- <button @click="() => router.push({ name: 'requestForm', params: { id: request.id } })" class="bg-gray-300 text-black py-2 px-4 rounded w-full mr-2">Editar</button>--> 
               <button @click="openDeleteModal(request.id)" class="bg-red-500 text-white py-2 px-4 rounded w-full">
                 <BaseIcon :path="mdiTrashCan" />
               </button>

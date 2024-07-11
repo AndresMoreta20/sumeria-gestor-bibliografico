@@ -26,7 +26,7 @@ export const fetchRequestById = async (requestId) => {
   try {
     const requestDoc = await getDoc(doc(db, "bookRequests", requestId));
     if (requestDoc.exists()) {
-      return requestDoc.data();
+      return { id: requestDoc.id, ...requestDoc.data() };
     } else {
       throw new Error("Request not found");
     }
@@ -105,10 +105,26 @@ export const approveRequest = async (request) => {
 };
 
 // Reject a request and move it to the declinedBooks collection
-export const rejectRequest = async (request) => {
+export const rejectRequest = async (requestId, rejectionReason) => {
   try {
-    await addDoc(collection(db, "declinedBooks"), request);
-    await deleteRequest(request.id);
+    const requestDoc = await getDoc(doc(db, "bookRequests", requestId));
+    if (!requestDoc.exists()) {
+      throw new Error("Request not found");
+    }
+
+    const requestData = requestDoc.data();
+
+    // Añadir comentario de rechazo al documento
+    const declinedRequest = {
+      ...requestData,
+      rejectionReason,
+    };
+
+    // Agregar el documento a la colección `declinedBooks`
+    await addDoc(collection(db, "declinedBooks"), declinedRequest);
+
+    // Eliminar el documento de la colección `bookRequests`
+    await deleteDoc(doc(db, "bookRequests", requestId));
   } catch (error) {
     console.error("Error rejecting request:", error);
     throw error;
@@ -139,7 +155,6 @@ export const deletePublisherRequest = async (requestId) => {
 // Send observations for a request
 export const sendObservations = async (requestId, observations) => {
   try {
-    const db = getFirestore();
     const requestRef = doc(db, "bookRequests", requestId);
     await updateDoc(requestRef, {
       status: "observations",
@@ -148,6 +163,7 @@ export const sendObservations = async (requestId, observations) => {
     console.log("Observations sent successfully.");
   } catch (error) {
     console.error("Error sending observations:", error);
+    throw error;
   }
 };
 
@@ -159,7 +175,6 @@ export const updateFieldStatus = async (
   comment
 ) => {
   try {
-    const db = getFirestore();
     const requestRef = doc(db, "bookRequests", requestId);
     await updateDoc(requestRef, {
       [`fieldStatus.${fieldName}`]: status,
@@ -168,6 +183,7 @@ export const updateFieldStatus = async (
     console.log("Field status updated successfully.");
   } catch (error) {
     console.error("Error updating field status:", error);
+    throw error;
   }
 };
 
@@ -223,6 +239,17 @@ export const checkDuplicatePublisherData = async ({
     };
   } catch (error) {
     console.error("Error checking duplicate publisher data:", error);
+    throw error;
+  }
+};
+
+// Fetch all rejected requests
+export const fetchRejectedRequests = async () => {
+  try {
+    const querySnapshot = await getDocs(collection(db, "declinedBooks"));
+    return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error("Error fetching rejected requests:", error);
     throw error;
   }
 };

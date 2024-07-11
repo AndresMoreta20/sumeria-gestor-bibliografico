@@ -7,7 +7,6 @@ import {
   addDoc,
   doc,
   updateDoc,
-  getFirestore,
 } from "firebase/firestore";
 import { db } from "@/firebase";
 
@@ -169,5 +168,61 @@ export const updateFieldStatus = async (
     console.log("Field status updated successfully.");
   } catch (error) {
     console.error("Error updating field status:", error);
+  }
+};
+
+// Fetch all data from newPublisherRequest and publishers collections
+export const fetchAllPublisherData = async () => {
+  try {
+    const [newPublisherRequestsSnapshot, publishersSnapshot] =
+      await Promise.all([
+        getDocs(collection(db, "newPublisherRequest")),
+        getDocs(collection(db, "publishers")),
+      ]);
+
+    const newPublisherRequests = newPublisherRequestsSnapshot.docs.map(
+      (doc) => ({ id: doc.id, ...doc.data() })
+    );
+    const publishers = publishersSnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    return { newPublisherRequests, publishers };
+  } catch (error) {
+    console.error("Error fetching publisher data:", error);
+    throw error;
+  }
+};
+
+// Check for duplicate publisher data
+export const checkDuplicatePublisherData = async ({
+  name,
+  razonSocial,
+  email,
+}) => {
+  try {
+    const { newPublisherRequests, publishers } = await fetchAllPublisherData();
+
+    const allEntries = [...newPublisherRequests, ...publishers];
+
+    const nameExists = name
+      ? allEntries.some((entry) => entry.name === name)
+      : false;
+    const razonSocialExists = razonSocial
+      ? allEntries.some((entry) => entry.razonSocial === razonSocial)
+      : false;
+    const emailExists = email
+      ? allEntries.some((entry) => entry.email === email)
+      : false;
+
+    return {
+      nameExists,
+      razonSocialExists,
+      emailExists,
+    };
+  } catch (error) {
+    console.error("Error checking duplicate publisher data:", error);
+    throw error;
   }
 };

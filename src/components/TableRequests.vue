@@ -159,7 +159,7 @@ onMounted(loadRequests);
               <strong>Editorial:</strong> {{ request.publisherName }}
             </div>
             <div class="mt-auto flex justify-between w-full">
-              <button @click="() => router.push({ name: 'requestForm', params: { id: request.id } })" class="bg-gray-300 text-black py-2 px-4 rounded w-full mr-2">Editar</button>
+            <!-- Comment <button @click="() => router.push({ name: 'requestForm', params: { id: request.id } })" class="bg-gray-300 text-black py-2 px-4 rounded w-full mr-2">Editar</button>--> 
               <button @click="openDeleteModal(request.id)" class="bg-red-500 text-white py-2 px-4 rounded w-full">
                 <BaseIcon :path="mdiTrashCan" />
               </button>

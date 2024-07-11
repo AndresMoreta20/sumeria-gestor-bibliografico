@@ -34,9 +34,10 @@ const isSuccessModalActive = ref(false);
 const bookToUpdate = ref(null);
 const books = ref(props.books);
 
-// Estado para la paginación
 const currentPage = ref(1);
 const booksPerPage = 8;
+
+const userRole = ref(sessionStorage.getItem('user-role'));
 
 const filteredBooks = computed(() => {
   let booksByCategory = books.value;
@@ -64,14 +65,12 @@ const filteredBooks = computed(() => {
   return booksByAvailability;
 });
 
-// Cálculo de los libros que se mostrarán en la página actual
 const paginatedBooks = computed(() => {
   const start = (currentPage.value - 1) * booksPerPage;
   const end = start + booksPerPage;
   return filteredBooks.value.slice(start, end);
 });
 
-// Calcular el número total de páginas
 const totalPages = computed(() => Math.ceil(filteredBooks.value.length / booksPerPage));
 
 const fetchBooks = async () => {
@@ -97,15 +96,12 @@ const viewBook = (bookId) => {
 const loadCategories = async () => {
   try {
     categoriesLoading.value = true;
-    console.log("Fetching categories...");
     const response = await fetchCategories();
-    console.log("Categories fetched:", response.data);
     categories.value = response.data;
   } catch (error) {
     console.error("Error al obtener categorías:", error);
   } finally {
     categoriesLoading.value = false;
-    console.log("Categories loading state:", categoriesLoading.value);
   }
 };
 
@@ -125,14 +121,12 @@ const updateBookStatus = async (bookId, status) => {
 
 const confirmUpdateStatus = () => {
   if (bookToUpdate.value) {
-    console.log("Updating book status for:", bookToUpdate.value);
     updateBookStatus(bookToUpdate.value.id, bookToUpdate.value.status === 'publish' ? 'private' : 'publish');
     isModalDangerActive.value = false;
   }
 };
 
 const openDeactivateModal = (book) => {
-  console.log("Opening deactivate modal for book:", book);
   bookToUpdate.value = book;
   isModalDangerActive.value = true;
 };
@@ -146,7 +140,6 @@ onMounted(async () => {
   await fetchBooks();
 });
 </script>
-
 <template>
   <div>
     <CardBoxModal v-model="isModalDangerActive" title="Por favor confirme" button="danger" has-cancel @confirm="confirmUpdateStatus">
@@ -196,7 +189,7 @@ onMounted(async () => {
           :input-value="true"
         />
       </div>
-      <button @click="goToNewBook" class="bg-blue-500 text-white p-2 rounded">
+      <button v-if="userRole !== 'publisher'" @click="goToNewBook" class="bg-blue-500 text-white p-2 rounded">
         Nuevo Libro
       </button>
     </div>
@@ -214,12 +207,13 @@ onMounted(async () => {
             <p class="text-blue-500 mb-2">${{ book.price }}</p>
             <p v-if="book.virtual != true" class="text-blue-500 mb-2">Stock: {{ book.stock_quantity }}</p>
             <p class="text-gray-500 mb-2">{{ book.categories[0]?.name }}</p>
+            <p class="text-gray-500 mb-2">{{ book.publisher }}</p>
             <p class="text-gray-500 mb-4">
               {{
                 book.attributes.find((attr) => attr.name === "Formato")?.options[0]
               }}
             </p>
-            <div class="mt-auto flex justify-between w-full">
+            <div v-if="userRole !== 'publisher'" class="mt-auto flex justify-between w-full">
               <button @click="viewBook(book.id)" class="bg-gray-300 text-black py-2 px-4 rounded w-full mr-2">
                 Ver
               </button>

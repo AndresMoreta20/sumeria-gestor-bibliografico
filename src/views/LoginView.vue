@@ -90,7 +90,7 @@ const submit = async () => {
     errorMessage.value = "";
     try {
       await mainStore.handleLogin(form.login, form.pass);
-      router.push("/dashboard");
+      router.push("/books");
     } catch (error) {
       console.error("Error durante el login:", error);
       errorMessage.value = error.message || "Falló el inicio de sesión.";

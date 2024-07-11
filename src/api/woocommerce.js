@@ -1,4 +1,3 @@
-// api/woocommerce.js
 import axios from "axios";
 
 const apiClient = axios.create({
@@ -247,6 +246,20 @@ export const checkSkuExists = async (sku) => {
     return response.data.length > 0;
   } catch (error) {
     console.error("Error checking SKU:", error);
+    throw error;
+  }
+};
+
+export const updateProductById = async (productId, updatedData) => {
+  try {
+    const response = await apiClient.put(
+      `/products/${productId}`,
+      updatedData,
+      getAuth()
+    );
+    return response.data;
+  } catch (error) {
+    console.error(`Error updating product with ID (${productId}):`, error);
     throw error;
   }
 };

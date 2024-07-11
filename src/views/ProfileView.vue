@@ -1,5 +1,5 @@
 <script setup>
-import { reactive } from 'vue'
+import { reactive, onMounted } from 'vue'
 import { useMainStore } from '@/stores/main'
 import { mdiAsterisk, mdiFormTextboxPassword } from '@mdi/js'
 import SectionMain from '@/components/SectionMain.vue'
@@ -10,100 +10,185 @@ import FormControl from '@/components/FormControl.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseButtons from '@/components/BaseButtons.vue'
 import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
+import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
+import { db } from "@/firebase";
 
 const mainStore = useMainStore()
 
-const passwordForm = reactive({
-  password_current: '',
-  password: '',
-  password_confirmation: ''
+const profileForm = reactive({
+  ciudad: '',
+  createdAt: '',
+  departamento: '',
+  direccion: '',
+  email: '',
+  paginaWeb: '',
+  razonSocial: '',
+  ruc: '',
+  telefono: ''
 })
 
-const submitPass = async () => {
-  if (passwordForm.password !== passwordForm.password_confirmation) {
-    alert('New passwords do not match.')
-    return
-  }
-
-  const userEmail = sessionStorage.getItem('user-email'); // Obtener el correo electrónico del usuario
-  if (!userEmail) {
-    alert('User email is not available');
+const fetchProfileData = async () => {
+  const userToken = sessionStorage.getItem('user-token');
+  if (!userToken) {
+    alert('User token is not available');
     return;
   }
 
   try {
-    const token = sessionStorage.getItem('user-token'); // Obtener el JWT desde el almacenamiento de sesión
-
-    const response = await fetch('https://cindyl23.sg-host.com/?rest_route=/simple-jwt-login/v1/user/reset_password', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        email: userEmail, // Usar el correo electrónico del usuario desde sessionStorage
-        new_password: passwordForm.password
-      })
-    });
-
-    const data = await response.json();
-    console.log('Server response:', data); // Log the server response
-    if (response.ok) {
-      alert('Your password has been reset successfully.');
+    const docRef = doc(db, "publishers", userToken);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      console.log("Document data:", data); // Log the document data
+      profileForm.ciudad = data.ciudad || '';
+      profileForm.createdAt = data.createdAt || '';
+      profileForm.departamento = data.departamento || '';
+      profileForm.direccion = data.direccion || '';
+      profileForm.email = data.email || '';
+      profileForm.paginaWeb = data.paginaWeb || '';
+      profileForm.razonSocial = data.razonSocial || '';
+      profileForm.ruc = data.ruc || '';
+      profileForm.telefono = data.telefono || '';
     } else {
-      throw new Error(data.message || 'Error resetting password');
+      console.error("No such document!");
+      // Optionally, create the document if it does not exist
+      await setDoc(docRef, {
+        ciudad: '',
+        createdAt: new Date().toISOString(),
+        departamento: '',
+        direccion: '',
+        email: '', // This can be set if you have it
+        paginaWeb: '',
+        razonSocial: '',
+        ruc: '',
+        telefono: ''
+      });
+      console.log("Document created with default values.");
     }
   } catch (error) {
-    console.error('Error resetting password:', error);
-    alert(`There was an error resetting the password: ${error.message}`);
+    console.error("Error fetching profile data:", error);
   }
 }
+
+const submitProfile = async () => {
+  const userToken = sessionStorage.getItem('user-token');
+  if (!userToken) {
+    alert('User token is not available');
+    return;
+  }
+
+  try {
+    const docRef = doc(db, "publishers", userToken);
+    await updateDoc(docRef, {
+      ciudad: profileForm.ciudad,
+      createdAt: profileForm.createdAt,
+      departamento: profileForm.departamento,
+      direccion: profileForm.direccion,
+      email: profileForm.email,
+      paginaWeb: profileForm.paginaWeb,
+      razonSocial: profileForm.razonSocial,
+      ruc: profileForm.ruc,
+      telefono: profileForm.telefono
+    });
+    alert('Profile updated successfully');
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    alert(`There was an error updating the profile: ${error.message}`);
+  }
+}
+
+onMounted(() => {
+  fetchProfileData();
+});
 </script>
 
 <template>
   <LayoutAuthenticated>
     <SectionMain>
       <div class="flex justify-center items-center min-h-screen">
-        <CardBox is-form @submit.prevent="submitPass" class="w-full max-w-lg mx-auto">
-          <FormField label="Current password" help="Required. Your current password">
+        <CardBox is-form @submit.prevent="submitProfile" class="w-full max-w-lg mx-auto">
+          <FormField label="Ciudad" help="Required. Your city">
             <FormControl
-              v-model="passwordForm.password_current"
+              v-model="profileForm.ciudad"
               :icon="mdiAsterisk"
-              name="password_current"
-              type="password"
+              name="ciudad"
+              type="text"
               required
-              autocomplete="current-password"
             />
           </FormField>
 
-          <BaseDivider />
-
-          <FormField label="New password" help="Required. New password">
+          <FormField label="Departamento" help="Required. Your department">
             <FormControl
-              v-model="passwordForm.password"
-              :icon="mdiFormTextboxPassword"
-              name="password"
-              type="password"
+              v-model="profileForm.departamento"
+              :icon="mdiAsterisk"
+              name="departamento"
+              type="text"
               required
-              autocomplete="new-password"
             />
           </FormField>
 
-          <FormField label="Confirm password" help="Required. New password one more time">
+          <FormField label="Direccion" help="Required. Your address">
             <FormControl
-              v-model="passwordForm.password_confirmation"
-              :icon="mdiFormTextboxPassword"
-              name="password_confirmation"
-              type="password"
+              v-model="profileForm.direccion"
+              :icon="mdiAsterisk"
+              name="direccion"
+              type="text"
               required
-              autocomplete="new-password"
+            />
+          </FormField>
+
+          <FormField label="Email" help="Required. Your email">
+            <FormControl
+              v-model="profileForm.email"
+              :icon="mdiAsterisk"
+              name="email"
+              type="email"
+              required
+            />
+          </FormField>
+
+          <FormField label="Pagina Web" help="Optional. Your website">
+            <FormControl
+              v-model="profileForm.paginaWeb"
+              name="paginaWeb"
+              type="url"
+            />
+          </FormField>
+
+          <FormField label="Razon Social" help="Required. Your business name">
+            <FormControl
+              v-model="profileForm.razonSocial"
+              :icon="mdiAsterisk"
+              name="razonSocial"
+              type="text"
+              required
+            />
+          </FormField>
+
+          <FormField label="RUC" help="Required. Your RUC number">
+            <FormControl
+              v-model="profileForm.ruc"
+              :icon="mdiAsterisk"
+              name="ruc"
+              type="text"
+              required
+            />
+          </FormField>
+
+          <FormField label="Telefono" help="Required. Your phone number">
+            <FormControl
+              v-model="profileForm.telefono"
+              :icon="mdiAsterisk"
+              name="telefono"
+              type="tel"
+              required
             />
           </FormField>
 
           <template #footer>
             <BaseButtons>
               <BaseButton type="submit" color="info" label="Submit" />
-              <BaseButton color="info" label="Options" outline />
+              <BaseButton color="info" label="Cancel" outline />
             </BaseButtons>
           </template>
         </CardBox>

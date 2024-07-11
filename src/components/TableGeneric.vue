@@ -40,7 +40,7 @@ const props = defineProps({
 const isModalActive = ref(false)
 const selectedItem = ref(null)
 const searchQuery = ref('')
-const perPage = ref(5)
+const perPage = ref(8)
 const currentPage = ref(0)
 const checkedRows = ref([])
 
@@ -108,7 +108,7 @@ const goToNew = () => {
         <path :d="mdiMagnify" />
       </svg>
     </div>
-    <BaseButton color="primary" :icon="mdiPlus" @click="goToNew">Nuevo</BaseButton> <!-- Botón Nuevo -->
+   <!-- <BaseButton color="primary" :icon="mdiPlus" @click="goToNew">Nuevo</BaseButton>  Botón Nuevo -->
   </div>
 
   <table>

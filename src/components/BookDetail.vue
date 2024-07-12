@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import axios from "axios";
+import { useRouter } from "vue-router";
 
 const props = defineProps({
   bookId: {
@@ -11,6 +12,7 @@ const props = defineProps({
 
 const book = ref(null);
 const loading = ref(false);
+const router = useRouter();
 
 const consumerKey = import.meta.env.VITE_APP_CONSUMER_KEY;
 const consumerSecret = import.meta.env.VITE_APP_CONSUMER_SECRET;
@@ -35,6 +37,13 @@ const fetchBookDetails = async () => {
   }
 };
 
+const editBook = () => {
+  router.push({
+    name: 'newBook',
+    query: { bookData: JSON.stringify(book.value) }
+  });
+};
+
 onMounted(fetchBookDetails);
 </script>
 
@@ -49,6 +58,7 @@ onMounted(fetchBookDetails);
       <h2 class="text-2xl font-semibold mb-4">{{ book?.name }}</h2>
       <img :src="book?.images[0]?.src" alt="Book cover" class="h-48 w-32 object-cover mb-4"/>
       <p><strong>Precio:</strong> ${{ book?.price }}</p>
+      <p v-if="book?.virtual != true"><strong>Stock:</strong> {{ book?.stock_quantity }}</p>
       <p><strong>Descripción:</strong> <span v-html="book?.description"></span></p>
       <p><strong>Categoría:</strong> {{ book?.categories[0]?.name }}</p>
       <p><strong>Formato:</strong> {{ book?.attributes.find(attr => attr.name === 'Formato')?.options[0] }}</p>
@@ -56,9 +66,14 @@ onMounted(fetchBookDetails);
       <p><strong>ISBN:</strong> {{ book?.attributes.find(attr => attr.name === 'ISBN')?.options[0] }}</p>
       <p><strong>Editorial:</strong> {{ book?.attributes.find(attr => attr.name === 'Editorial')?.options[0] }}</p>
       <p><strong>Estado:</strong> {{ book?.attributes.find(attr => attr.name === 'Estado')?.options[0] }}</p>
-      <button @click="$emit('close')" class="bg-blue-500 text-white py-2 px-4 rounded mt-4">
-        Cerrar
-      </button>
+      <div class="flex space-x-4 mt-4">
+        <button @click="$emit('close')" class="bg-blue-500 text-white py-2 px-4 rounded">
+          Cerrar
+        </button>
+        <button @click="editBook" class="bg-green-500 text-white py-2 px-4 rounded">
+          Editar
+        </button>
+      </div>
     </div>
   </div>
 </template>

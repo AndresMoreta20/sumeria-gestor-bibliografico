@@ -1,8 +1,10 @@
+<!-- LanguagesView.vue -->
 <script setup>
+import { ref, onMounted } from 'vue'
 import DataTableView from '@/components/DataTableView.vue'
 import { mdiTranslate } from '@mdi/js'
+import { fetchLanguages } from '@/api/woocommerce'
 
-const endpoint = 'https://cindyl23.sg-host.com/wp-json/wc/v3/products/attributes/7/terms'
 const title = 'Languages'
 const columns = ['id', 'name']
 const columnLabels = { id: 'ID', name: 'Nombre' }
@@ -17,17 +19,26 @@ const transformData = (data) => {
     }
   })
 }
+
+const dataFetchFunction = async () => {
+  try {
+    const { data } = await fetchLanguages()
+    return transformData(data)
+  } catch (error) {
+    console.error('Error fetching languages:', error)
+    throw error
+  }
+}
 </script>
 
 <template>
   <DataTableView
-    :endpoint="endpoint"
     :title="title"
     :columns="columns"
     :column-labels="columnLabels"
     :icon="icon"
     :checkable="checkable"
-    :data-transform="transformData"
+    :dataFetchFunction="dataFetchFunction"
     new-route="languageForm"
   />
 </template>

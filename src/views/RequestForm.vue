@@ -1,6 +1,231 @@
+<template>
+  <LayoutAuthenticated>
+    <SectionMain>
+      <SectionTitleLineWithButton
+        :icon="mdiBookOutline"
+        title="Crear Nueva Solicitud de Libro"
+        main
+      />
+      <CardBox form @submit.prevent="submit" class="max-w-3xl mx-auto">
+        <div
+          v-if="submitError"
+          class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4"
+          role="alert"
+        >
+          <strong class="font-bold">Error!</strong>
+          <span class="block sm:inline">{{ submitError }}</span>
+        </div>
+        <div
+          v-if="formattedComments"
+          class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative mb-4"
+          role="alert"
+        >
+          <strong class="font-bold">Comentarios del Administrador: </strong>
+          <span class="block sm:inline" v-html="formattedComments"></span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField label="Imagen de Portada" :error="errors.imageFile">
+            <FormFilePicker
+              v-model="form.imageFile"
+              @update:modelValue="handleImageChange"
+              accept="image/*"
+            />
+            <div v-if="imagePreview" class="flex justify-center mt-2">
+              <img
+                :src="imagePreview"
+                alt="Vista previa de portada"
+                class="max-w-full h-40 object-contain"
+              />
+            </div>
+            <p v-if="imageLoading" class="mt-1 text-sm text-blue-600">
+              Subiendo imagen...
+            </p>
+          </FormField>
+          <FormField label="Archivo EPUB" :error="errors.file">
+            <FormFilePicker
+              v-model="form.file"
+              @update:modelValue="handleFileChange"
+              accept=".epub"
+            />
+            <p v-if="fileLoading" class="mt-1 text-sm text-blue-600">
+              Subiendo archivo...
+            </p>
+          </FormField>
+        </div>
+        <BaseDivider />
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField label="Título" :error="errors.title">
+            <FormControl
+              v-model="form.title"
+              type="text"
+              placeholder="Título del libro"
+            />
+          </FormField>
+          <FormField label="ISBN" :error="errors.isbn">
+            <FormControl v-model="form.isbn" type="text" placeholder="ISBN" />
+          </FormField>
+          <FormField label="Categoría">
+            <select
+              v-model="form.category"
+              @change="(e) => handleSelectionChange(e, 'category')"
+              class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+            >
+              <option value="">Selecciona una categoría</option>
+              <option
+                v-for="category in categories"
+                :key="category.id"
+                :value="category.id"
+              >
+                {{ category.name }}
+              </option>
+              <option value="new">Añadir nueva categoría</option>
+            </select>
+            <div v-if="showNewInput.category" class="mt-2">
+              <FormControl
+                v-model="newEntry.category"
+                type="text"
+                placeholder="Nueva categoría"
+                @keyup.enter="() => addNewEntry('category')"
+              />
+              <BaseButton
+                class="mt-2"
+                color="info"
+                label="Añadir"
+                @click="() => addNewEntry('category')"
+              />
+            </div>
+          </FormField>
+          <FormField label="Autor" :error="errors.author">
+            <select
+              v-model="form.author"
+              @change="(e) => handleSelectionChange(e, 'author')"
+              class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+            >
+              <option value="">Selecciona un autor</option>
+              <option
+                v-for="author in authors"
+                :key="author.id"
+                :value="author.id"
+              >
+                {{ author.name }}
+              </option>
+              <option value="new">Añadir nuevo autor</option>
+            </select>
+            <div v-if="showNewInput.author" class="mt-2">
+              <FormControl
+                v-model="newEntry.author"
+                type="text"
+                placeholder="Nuevo autor"
+                @keyup.enter="() => addNewEntry('author')"
+              />
+              <BaseButton
+                class="mt-2"
+                color="info"
+                label="Añadir"
+                @click="() => addNewEntry('author')"
+              />
+            </div>
+          </FormField>
+          <FormField label="Editorial" :error="errors.publisher">
+            <FormControl
+              v-model="form.publisher"
+              type="text"
+              placeholder="Nombre de la editorial"
+              disabled
+            />
+          </FormField>
+          <FormField label="Idioma" :error="errors.language">
+            <select
+              v-model="form.language"
+              @change="(e) => handleSelectionChange(e, 'language')"
+              class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+            >
+              <option value="">Selecciona un idioma</option>
+              <option
+                v-for="language in languages"
+                :key="language.id"
+                :value="language.id"
+              >
+                {{ language.name }}
+              </option>
+              <option value="new">Añadir nuevo idioma</option>
+            </select>
+            <div v-if="showNewInput.language" class="mt-2">
+              <FormControl
+                v-model="newEntry.language"
+                type="text"
+                placeholder="Nuevo idioma"
+                @keyup.enter="() => addNewEntry('language')"
+              />
+              <BaseButton
+                class="mt-2"
+                color="info"
+                label="Añadir"
+                @click="() => addNewEntry('language')"
+              />
+            </div>
+          </FormField>
+          <FormField label="Precio Regular ($)" :error="errors.regularPrice">
+            <FormControl
+              v-model.number="form.regularPrice"
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="Precio regular"
+            />
+          </FormField>
+        </div>
+        <FormField label="Descripción Corta" :error="errors.shortDescription">
+          <FormControl
+            v-model="form.shortDescription"
+            type="textarea"
+            placeholder="Breve descripción del libro"
+          />
+        </FormField>
+        <FormField label="Descripción Completa">
+          <FormControl
+            v-model="form.description"
+            type="textarea"
+            placeholder="Descripción completa del libro"
+          />
+        </FormField>
+        <template #footer>
+          <BaseButtons>
+            <BaseButton
+              v-if="!loading"
+              type="submit"
+              color="info"
+              label="Enviar Solicitud"
+              @click="submit"
+            />
+            <BaseButton
+              v-if="loading"
+              color="info"
+              label="Enviando..."
+              disabled
+            />
+            <BaseButton
+              @click="cancel"
+              color="danger"
+              label="Cancelar"
+              outline
+            />
+          </BaseButtons>
+        </template>
+      </CardBox>
+    </SectionMain>
+  </LayoutAuthenticated>
+</template>
+
 <script setup>
-import { reactive, ref, watch, onMounted } from "vue";
-import { collection, addDoc, getFirestore } from "firebase/firestore";
+import { reactive, ref, watch, onMounted, computed } from "vue";
+import {
+  collection,
+  addDoc,
+  doc,
+  getDoc,
+  getFirestore,
+} from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import {
   getStorage,
@@ -18,17 +243,55 @@ import BaseButton from "@/components/BaseButton.vue";
 import BaseButtons from "@/components/BaseButtons.vue";
 import SectionTitleLineWithButton from "@/components/SectionTitleLineWithButton.vue";
 import LayoutAuthenticated from "@/layouts/LayoutAuthenticated.vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { mdiBookOutline } from "@mdi/js";
-import { fetchCategories, fetchAuthors, fetchLanguages } from "@/api/woocommerce";
+import {
+  fetchCategories,
+  fetchAuthors,
+  fetchLanguages,
+} from "@/api/woocommerce";
 
+const route = useRoute();
 const router = useRouter();
 
 const categories = ref([]);
 const authors = ref([]);
 const languages = ref([]);
-const newEntry = ref({ category: '', author: '', language: '' });
-const showNewInput = reactive({ category: false, author: false, language: false });
+const newEntry = ref({ category: "", author: "", language: "" });
+const showNewInput = reactive({
+  category: false,
+  author: false,
+  language: false,
+});
+const appealMode = ref(false);
+const requestId = ref(null);
+
+const loadRequestData = async (id) => {
+  try {
+    const db = getFirestore();
+    const requestDoc = await getDoc(doc(db, "declinedBooks", id));
+    if (requestDoc.exists()) {
+      const data = requestDoc.data();
+      Object.assign(form, data);
+      form.comments = data.comments;
+      form.imageFile = null;
+      form.file = null;
+      imagePreview.value = data.coverUrl;
+    } else {
+      throw new Error("Request not found");
+    }
+  } catch (error) {
+    console.error("Error loading request data:", error);
+  }
+};
+
+const formatComments = (comments) => {
+  return Object.entries(comments)
+    .map(([field, comment]) => {
+      return `<strong>${field}:</strong> ${comment}`;
+    })
+    .join("<br>");
+};
 
 onMounted(async () => {
   try {
@@ -41,17 +304,24 @@ onMounted(async () => {
     const languagesResponse = await fetchLanguages();
     languages.value = languagesResponse.data;
 
-    form.publisher = sessionStorage.getItem('user-name') || '';
+    form.publisher = sessionStorage.getItem("user-name") || "";
+
+    const { appeal, id } = route.query;
+    if (appeal && id) {
+      appealMode.value = true;
+      requestId.value = id;
+      await loadRequestData(id);
+    }
   } catch (error) {
     console.error("Error fetching data:", error);
   }
 });
 
 const handleSelectionChange = (event, type) => {
-  if (event.target.value === 'new') {
+  if (event.target.value === "new") {
     showNewInput[type] = true;
-    form[type] = '';
-    errors[type] = ''; // Limpiar el mensaje de error cuando se selecciona "Añadir nuevo"
+    form[type] = "";
+    errors[type] = ""; // Limpiar el mensaje de error cuando se selecciona "Añadir nuevo"
   } else {
     showNewInput[type] = false;
     form[type] = event.target.value;
@@ -59,17 +329,17 @@ const handleSelectionChange = (event, type) => {
 };
 
 const addNewEntry = (type) => {
-  if (newEntry.value[type].trim() !== '') {
+  if (newEntry.value[type].trim() !== "") {
     form[type] = newEntry.value[type].trim();
-    if (type === 'category') {
+    if (type === "category") {
       categories.value.push({ id: form[type], name: form[type] });
-    } else if (type === 'author') {
+    } else if (type === "author") {
       authors.value.push({ id: form[type], name: form[type] });
-    } else if (type === 'language') {
+    } else if (type === "language") {
       languages.value.push({ id: form[type], name: form[type] });
     }
     showNewInput[type] = false;
-    newEntry.value[type] = '';
+    newEntry.value[type] = "";
   }
 };
 
@@ -83,13 +353,15 @@ const form = reactive({
   publisher: "",
   language: "",
   regularPrice: "",
-  salePrice: "",
   shortDescription: "",
   description: "",
   imageFile: null,
   stockQuantity: 100,
   sku: "",
+  comments: {},
 });
+
+const formattedComments = computed(() => formatComments(form.comments));
 
 const loading = ref(false);
 const imageLoading = ref(false);
@@ -140,26 +412,20 @@ const validateField = (field) => {
         : "";
       break;
     case "author":
-      errors[field] = !form[field] && !showNewInput.author ? "El autor es requerido" : "";
+      errors[field] =
+        !form[field] && !showNewInput.author ? "El autor es requerido" : "";
       break;
     case "publisher":
       errors[field] = !form[field] ? "La editorial es requerida" : "";
       break;
     case "language":
-      errors[field] = !form[field] && !showNewInput.language ? "El idioma es requerido" : "";
+      errors[field] =
+        !form[field] && !showNewInput.language ? "El idioma es requerido" : "";
       break;
     case "regularPrice":
       errors[field] =
         !form[field] || isNaN(form[field]) || form[field] < 0
           ? "Se requiere un precio regular válido y no negativo"
-          : "";
-      break;
-    case "salePrice":
-      errors[field] =
-        form[field] && (isNaN(form[field]) || form[field] < 0)
-          ? "Se requiere un precio de oferta válido y no negativo"
-          : (form[field] && form[field] > form.regularPrice)
-          ? "El precio de oferta no puede ser mayor que el precio regular"
           : "";
       break;
     case "shortDescription":
@@ -259,7 +525,6 @@ const submit = async () => {
       publisher: form.publisher,
       language: form.language,
       regularPrice: parseFloat(form.regularPrice),
-      salePrice: form.salePrice ? parseFloat(form.salePrice) : null,
       shortDescription: form.shortDescription,
       description: form.description,
       coverUrl,
@@ -290,101 +555,3 @@ const cancel = () => {
   router.push("/requests");
 };
 </script>
-
-<template>
-  <LayoutAuthenticated>
-    <SectionMain>
-      <SectionTitleLineWithButton :icon="mdiBookOutline" title="Crear Nueva Solicitud de Libro" main>
-      </SectionTitleLineWithButton>
-      <CardBox form @submit.prevent="submit" class="max-w-3xl mx-auto">
-        <div v-if="submitError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-          <strong class="font-bold">Error!</strong>
-          <span class="block sm:inline">{{ submitError }}</span>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField label="Imagen de Portada" :error="errors.imageFile">
-            <FormFilePicker v-model="form.imageFile" @update:modelValue="handleImageChange" accept="image/*" />
-            <div v-if="imagePreview" class="flex justify-center mt-2">
-              <img :src="imagePreview" alt="Vista previa de portada" class="max-w-full h-40 object-contain" />
-            </div>
-            <p v-if="imageLoading" class="mt-1 text-sm text-blue-600">Subiendo imagen...</p>
-          </FormField>
-          <FormField label="Archivo EPUB" :error="errors.file">
-            <FormFilePicker v-model="form.file" @update:modelValue="handleFileChange" accept=".epub" />
-            <p v-if="fileLoading" class="mt-1 text-sm text-blue-600">Subiendo archivo...</p>
-          </FormField>
-        </div>
-        <BaseDivider />
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField label="Título" :error="errors.title">
-            <FormControl v-model="form.title" type="text" placeholder="Título del libro" />
-          </FormField>
-          <FormField label="ISBN" :error="errors.isbn">
-            <FormControl v-model="form.isbn" type="text" placeholder="ISBN" />
-          </FormField>
-          <FormField label="Categoría">
-            <select v-model="form.category" @change="(e) => handleSelectionChange(e, 'category')" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-              <option value="">Selecciona una categoría</option>
-              <option v-for="category in categories" :key="category.id" :value="category.id">
-                {{ category.name }}
-              </option>
-              <option value="new">Añadir nueva categoría</option>
-            </select>
-            <div v-if="showNewInput.category" class="mt-2">
-              <FormControl v-model="newEntry.category" type="text" placeholder="Nueva categoría" @keyup.enter="() => addNewEntry('category')" />
-              <BaseButton class="mt-2" color="info" label="Añadir" @click="() => addNewEntry('category')" />
-            </div>
-          </FormField>
-          <FormField label="Autor" :error="errors.author">
-            <select v-model="form.author" @change="(e) => handleSelectionChange(e, 'author')" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-              <option value="">Selecciona un autor</option>
-              <option v-for="author in authors" :key="author.id" :value="author.id">
-                {{ author.name }}
-              </option>
-              <option value="new">Añadir nuevo autor</option>
-            </select>
-            <div v-if="showNewInput.author" class="mt-2">
-              <FormControl v-model="newEntry.author" type="text" placeholder="Nuevo autor" @keyup.enter="() => addNewEntry('author')" />
-              <BaseButton class="mt-2" color="info" label="Añadir" @click="() => addNewEntry('author')" />
-            </div>
-          </FormField>
-          <FormField label="Editorial" :error="errors.publisher">
-            <FormControl v-model="form.publisher" type="text" placeholder="Nombre de la editorial" />
-          </FormField>
-          <FormField label="Idioma" :error="errors.language">
-            <select v-model="form.language" @change="(e) => handleSelectionChange(e, 'language')" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-              <option value="">Selecciona un idioma</option>
-              <option v-for="language in languages" :key="language.id" :value="language.id">
-                {{ language.name }}
-              </option>
-              <option value="new">Añadir nuevo idioma</option>
-            </select>
-            <div v-if="showNewInput.language" class="mt-2">
-              <FormControl v-model="newEntry.language" type="text" placeholder="Nuevo idioma" @keyup.enter="() => addNewEntry('language')" />
-              <BaseButton class="mt-2" color="info" label="Añadir" @click="() => addNewEntry('language')" />
-            </div>
-          </FormField>
-          <FormField label="Precio Regular ($)" :error="errors.regularPrice">
-            <FormControl v-model.number="form.regularPrice" type="number" step="0.01" min="0" placeholder="Precio regular" />
-          </FormField>
-          <FormField label="Precio de Oferta ($)" :error="errors.salePrice">
-            <FormControl v-model.number="form.salePrice" type="number" step="0.01" min="0" placeholder="Precio de oferta (opcional)" />
-          </FormField>
-        </div>
-        <FormField label="Descripción Corta" :error="errors.shortDescription">
-          <FormControl v-model="form.shortDescription" type="textarea" placeholder="Breve descripción del libro" />
-        </FormField>
-        <FormField label="Descripción Completa">
-          <FormControl v-model="form.description" type="textarea" placeholder="Descripción completa del libro" />
-        </FormField>
-        <template #footer>
-          <BaseButtons>
-            <BaseButton v-if="!loading" type="submit" color="info" label="Enviar Solicitud" @click="submit" />
-            <BaseButton v-if="loading" color="info" label="Enviando..." disabled />
-            <BaseButton @click="cancel" color="danger" label="Cancelar" outline />
-          </BaseButtons>
-        </template>
-      </CardBox>
-    </SectionMain>
-  </LayoutAuthenticated>
-</template>

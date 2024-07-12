@@ -70,6 +70,7 @@ import BaseButton from '@/components/BaseButton.vue';
 import BaseButtons from '@/components/BaseButtons.vue';
 import LayoutGuest from '@/layouts/LayoutGuest.vue';
 import { useRouter } from 'vue-router';
+import { checkDuplicatePublisherData } from '@/api/firebase';
 
 const router = useRouter();
 
@@ -93,9 +94,78 @@ const successMessage = ref('');
 const provincias = [
   'Azuay', 'Bolívar', 'Cañar', 'Carchi', 'Chimborazo', 'Cotopaxi', 'El Oro',
   'Esmeraldas', 'Galápagos', 'Guayas', 'Imbabura', 'Loja', 'Los Ríos', 'Manabí',
-  'Morona Santiago', 'Napo', 'Orellana', 'Pastaza', 'Pichincha', 'Sucumbíos',
-  'Tungurahua', 'Zamora Chinchipe'
+  'Morona Santiago', 'Napo', 'Orellana', 'Pastaza', 'Pichincha', 'Santa Elena',
+  'Santo Domingo de los Tsáchilas', 'Sucumbíos', 'Tungurahua', 'Zamora Chinchipe'
 ];
+
+const validateRuc = (ruc) => {
+  if (ruc.length !== 13 || !/^\d{13}$/.test(ruc)) {
+    return false;
+  }
+  
+  const provinceCode = parseInt(ruc.substring(0, 2));
+  if (provinceCode < 1 || provinceCode > 24) {
+    return false;
+  }
+
+  const thirdDigit = parseInt(ruc[2]);
+  
+  // Validación para personas naturales y sociedades extranjeras sin cédula
+  if (thirdDigit < 6) {
+    return validateNaturalPerson(ruc);
+  }
+  
+  // Validación para sociedades públicas
+  if (thirdDigit === 6) {
+    return validatePublicCompany(ruc);
+  }
+  
+  // Validación para sociedades privadas y extranjeras
+  if (thirdDigit === 9) {
+    return validatePrivateCompany(ruc);
+  }
+
+  return false;
+};
+
+const validateNaturalPerson = (ruc) => {
+  const cedula = ruc.substring(0, 10);
+  const coefficients = [2, 1, 2, 1, 2, 1, 2, 1, 2];
+  let total = 0;
+
+  for (let i = 0; i < 9; i++) {
+    let value = parseInt(cedula[i]) * coefficients[i];
+    if (value > 9) value -= 9;
+    total += value;
+  }
+
+  const checkDigit = 10 - (total % 10);
+  return (checkDigit === 10 ? 0 : checkDigit) === parseInt(cedula[9]);
+};
+
+const validatePublicCompany = (ruc) => {
+  const coefficients = [3, 2, 7, 6, 5, 4, 3, 2];
+  let total = 0;
+
+  for (let i = 0; i < 8; i++) {
+    total += parseInt(ruc[i]) * coefficients[i];
+  }
+
+  const checkDigit = 11 - (total % 11);
+  return (checkDigit === 11 ? 0 : checkDigit) === parseInt(ruc[8]);
+};
+
+const validatePrivateCompany = (ruc) => {
+  const coefficients = [4, 3, 2, 7, 6, 5, 4, 3, 2];
+  let total = 0;
+
+  for (let i = 0; i < 9; i++) {
+    total += parseInt(ruc[i]) * coefficients[i];
+  }
+
+  const checkDigit = 11 - (total % 11);
+  return (checkDigit === 11 ? 0 : checkDigit) === parseInt(ruc[9]);
+};
 
 const submit = async () => {
   // Validación de campos obligatorios
@@ -107,7 +177,38 @@ const submit = async () => {
   loading.value = true;
   errorMessage.value = '';
   successMessage.value = '';
+
   try {
+    // Validar RUC con el algoritmo
+    if (!validateRuc(form.ruc)) {
+      errorMessage.value = 'El RUC ingresado no es válido.';
+      loading.value = false;
+      return;
+    }
+
+    // Verificar duplicados
+    const duplicateCheck = await checkDuplicatePublisherData({ 
+      name: form.ruc, 
+      razonSocial: form.razonSocial, 
+      email: form.email 
+    });
+
+    if (duplicateCheck.nameExists) {
+      errorMessage.value = 'El RUC ya ha sido utilizado en una solicitud previa o está registrado.';
+      loading.value = false;
+      return;
+    }
+    if (duplicateCheck.razonSocialExists) {
+      errorMessage.value = 'La razón social ya ha sido utilizada en una solicitud previa o está registrada.';
+      loading.value = false;
+      return;
+    }
+    if (duplicateCheck.emailExists) {
+      errorMessage.value = 'El correo electrónico ya ha sido utilizado en una solicitud previa o está registrado.';
+      loading.value = false;
+      return;
+    }
+
     const db = getFirestore();
     const requestRef = collection(db, 'newPublisherRequest');
     await addDoc(requestRef, {

@@ -1,13 +1,17 @@
+<!-- CategoriesView.vue -->
 <script setup>
+import { ref, onMounted } from 'vue'
 import DataTableView from '@/components/DataTableView.vue'
 import { mdiHeart } from '@mdi/js'
+import { fetchCategories } from '@/api/woocommerce'
 
-const endpoint = 'https://cindyl23.sg-host.com/wp-json/wc/v3/products/categories'
 const title = 'Categorías'
 const columns = ['id', 'name']
 const columnLabels = { id: 'ID', name: 'Nombre' }
 const icon = mdiHeart
 const checkable = false
+
+const categories = ref([])
 
 const transformData = (data) => {
   return data.map(item => {
@@ -17,17 +21,26 @@ const transformData = (data) => {
     }
   })
 }
+
+const dataFetchFunction = async () => {
+  try {
+    const { data } = await fetchCategories()
+    return transformData(data)
+  } catch (error) {
+    console.error('Error fetching categories:', error)
+    throw error
+  }
+}
+
 </script>
 
 <template>
   <DataTableView
-    :endpoint="endpoint"
     :title="title"
     :columns="columns"
     :column-labels="columnLabels"
     :icon="icon"
     :checkable="checkable"
-    :data-transform="transformData"
-    new-route="categoryForm"
+    :dataFetchFunction="dataFetchFunction"
   />
 </template>

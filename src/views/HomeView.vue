@@ -62,11 +62,12 @@ onMounted(() => {
   <LayoutAuthenticated>
     <SectionMain>
       <!-- Power BI Iframe -->
+      <!-- Power BI Iframe -->
       <iframe
-        title="ReporteSumeria"
+        title="DashboardSumeria"
         width="100%"
-        height="800px"
-        src="https://app.powerbi.com/view?r=eyJrIjoiYWNmZDJiMzItNWJiZi00OTZhLTkwM2YtNjVhODY5YTY2ODA2IiwidCI6IjU4NWE0ZDkyLWRiMWQtNGJiYi1iNWFjLWM1Mjk5ZTM4OTRlMyIsImMiOjR9"
+        height="3500px"
+        src="https://app.powerbi.com/view?r=eyJrIjoiNWVjYjU2MmMtODQzZC00Nzc4LTkzMTctMWRlMDJlOWNkYWRlIiwidCI6IjU4NWE0ZDkyLWRiMWQtNGJiYi1iNWFjLWM1Mjk5ZTM4OTRlMyIsImMiOjR9"
         frameborder="0"
         allowFullScreen="true"
       ></iframe>

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import { fetchCategories, toggleBookStatus, fetchBooks as apiFetchBooks } from "@/api/woocommerce";
+import { fetchCategories, toggleBookStatus, fetchBooks as apiFetchBooks, fetchTrashedProducts, restoreProduct } from "@/api/woocommerce";
 import FormCheckRadio from "@/components/FormCheckRadio.vue"; 
 import FormControl from "@/components/FormControl.vue";
 import LoadingIndicator from '@/components/LoadingIndicator.vue';
@@ -34,9 +34,10 @@ const isSuccessModalActive = ref(false);
 const bookToUpdate = ref(null);
 const books = ref(props.books);
 
-// Estado para la paginación
 const currentPage = ref(1);
 const booksPerPage = 8;
+
+const userRole = ref(sessionStorage.getItem('user-role'));
 
 const filteredBooks = computed(() => {
   let booksByCategory = books.value;
@@ -53,7 +54,7 @@ const filteredBooks = computed(() => {
     );
   }
 
-  let booksByAvailability = booksByCategory.filter(book => book.status === (showAvailable.value ? "publish" : "private"));
+  let booksByAvailability = booksByCategory.filter(book => book.status === (showAvailable.value ? "publish" : "trash"));
 
   if (searchQuery.value) {
     booksByAvailability = booksByAvailability.filter(book =>
@@ -64,14 +65,12 @@ const filteredBooks = computed(() => {
   return booksByAvailability;
 });
 
-// Cálculo de los libros que se mostrarán en la página actual
 const paginatedBooks = computed(() => {
   const start = (currentPage.value - 1) * booksPerPage;
   const end = start + booksPerPage;
   return filteredBooks.value.slice(start, end);
 });
 
-// Calcular el número total de páginas
 const totalPages = computed(() => Math.ceil(filteredBooks.value.length / booksPerPage));
 
 const fetchBooks = async () => {
@@ -79,8 +78,22 @@ const fetchBooks = async () => {
     loading.value = true;
     const response = await apiFetchBooks();
     books.value = response;
+    console.log("Books fetched:", response);
   } catch (error) {
     console.error("Error fetching books:", error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const fetchTrashedBooks = async () => {
+  try {
+    loading.value = true;
+    const response = await fetchTrashedProducts();
+    books.value = response;
+    console.log("Trashed books fetched:", response);
+  } catch (error) {
+    console.error("Error fetching trashed books:", error);
   } finally {
     loading.value = false;
   }
@@ -97,27 +110,29 @@ const viewBook = (bookId) => {
 const loadCategories = async () => {
   try {
     categoriesLoading.value = true;
-    console.log("Fetching categories...");
     const response = await fetchCategories();
-    console.log("Categories fetched:", response.data);
     categories.value = response.data;
+    console.log("Categories fetched:", response.data);
   } catch (error) {
     console.error("Error al obtener categorías:", error);
   } finally {
     categoriesLoading.value = false;
-    console.log("Categories loading state:", categoriesLoading.value);
   }
 };
 
 const updateBookStatus = async (bookId, status) => {
   try {
     loading.value = true;
-    await toggleBookStatus(bookId, status);
+    if (status === 'trash') {
+      await toggleBookStatus(bookId, status);
+    } else {
+      await restoreProduct(bookId);
+    }
     await fetchBooks();
     isSuccessModalActive.value = true;
   } catch (error) {
-    console.error(`Error al ${status === 'private' ? 'desactivar' : 'activar'} el libro:`, error.response?.data || error);
-    alert(`Error al ${status === 'private' ? 'desactivar' : 'activar'} el libro`);
+    console.error(`Error al ${status === 'publish' ? 'activar' : 'desactivar'} el libro:`, error.response?.data || error);
+    alert(`Error al ${status === 'publish' ? 'activar' : 'desactivar'} el libro`);
   } finally {
     loading.value = false;
   }
@@ -125,20 +140,28 @@ const updateBookStatus = async (bookId, status) => {
 
 const confirmUpdateStatus = () => {
   if (bookToUpdate.value) {
-    console.log("Updating book status for:", bookToUpdate.value);
-    updateBookStatus(bookToUpdate.value.id, bookToUpdate.value.status === 'publish' ? 'private' : 'publish');
+    updateBookStatus(bookToUpdate.value.id, bookToUpdate.value.status === 'publish' ? 'trash' : 'publish');
     isModalDangerActive.value = false;
   }
 };
 
 const openDeactivateModal = (book) => {
-  console.log("Opening deactivate modal for book:", book);
   bookToUpdate.value = book;
   isModalDangerActive.value = true;
+  console.log("Deactivate modal opened for book:", book);
 };
 
 const goToPage = (pageNumber) => {
   currentPage.value = pageNumber;
+};
+
+const handleAvailabilitySwitch = async () => {
+  console.log("Switch availability changed to:", showAvailable.value);
+  if (showAvailable.value) {
+    await fetchBooks();
+  } else {
+    await fetchTrashedBooks();
+  }
 };
 
 onMounted(async () => {
@@ -146,7 +169,6 @@ onMounted(async () => {
   await fetchBooks();
 });
 </script>
-
 <template>
   <div>
     <CardBoxModal v-model="isModalDangerActive" title="Por favor confirme" button="danger" has-cancel @confirm="confirmUpdateStatus">
@@ -171,7 +193,7 @@ onMounted(async () => {
     <div class="flex justify-between items-center mb-6">
       <div>
         <label class="mr-2">Formato:</label>
-        <select v-model="selectedFormat" class="border rounded p-2 pr-10">
+        <select v-model="selectedFormat" class="border rounded p-2 pr-10 bg-transparent">
           <option value="all">Todos</option>
           <option value="physical">Físicos</option>
           <option value="digital">eBook</option>
@@ -192,11 +214,12 @@ onMounted(async () => {
           v-model="showAvailable"
           name="availability-switch"
           type="switch"
-          label="Disponibilidad"
+          label=""
           :input-value="true"
+          @change="handleAvailabilitySwitch"
         />
       </div>
-      <button @click="goToNewBook" class="bg-blue-500 text-white p-2 rounded">
+      <button v-if="userRole !== 'publisher'" @click="goToNewBook" class="bg-blue-500 text-white p-2 rounded">
         Nuevo Libro
       </button>
     </div>
@@ -212,13 +235,15 @@ onMounted(async () => {
               {{ book.name }}
             </h2>
             <p class="text-blue-500 mb-2">${{ book.price }}</p>
+            <p v-if="book.virtual != true" class="text-blue-500 mb-2">Stock: {{ book.stock_quantity }}</p>
             <p class="text-gray-500 mb-2">{{ book.categories[0]?.name }}</p>
+            <p class="text-gray-500 mb-2">{{ book.publisher }}</p>
             <p class="text-gray-500 mb-4">
               {{
                 book.attributes.find((attr) => attr.name === "Formato")?.options[0]
               }}
             </p>
-            <div class="mt-auto flex justify-between w-full">
+            <div v-if="userRole !== 'publisher'" class="mt-auto flex justify-between w-full">
               <button @click="viewBook(book.id)" class="bg-gray-300 text-black py-2 px-4 rounded w-full mr-2">
                 Ver
               </button>

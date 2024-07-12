@@ -23,19 +23,20 @@ const routeDefinitions = [
     title: "Login",
   },
   {
-    path: "/dashboard",
-    name: "dashboard",
-    componentPath: "HomeView",
-    requiresAuth: true,
-    title: "Dashboard",
-  },
-  {
     path: "/books",
     name: "books",
     componentPath: "BooksView",
     requiresAuth: true,
     title: "Libros",
   },
+  {
+    path: "/dashboard",
+    name: "dashboard",
+    componentPath: "HomeView",
+    requiresAuth: true,
+    title: "Dashboard",
+  },
+
   {
     path: "/categories",
     name: "categories",
@@ -99,6 +100,13 @@ const routeDefinitions = [
     title: "Nueva editorial",
   },
   {
+    path: "/publisherBooksView",
+    name: "publisherBooksView",
+    componentPath: "PublisherBooksView",
+    requiresAuth: true,
+    title: "Mis libros",
+  },
+  {
     path: "/forms",
     name: "forms",
     componentPath: "FormsView",
@@ -127,8 +135,16 @@ const routeDefinitions = [
     title: "Nueva Editorial",
   },
   {
-    path: "/categoryForm",
-    name: "categoryForm",
+    path: "/categoryForm/edit/:id",
+    name: "categoryEditForm",
+    componentPath: "CategoryForm",
+    requiresAuth: true,
+    props: true,
+    title: "Nueva Categoria",
+  },
+  {
+    path: "/categoryForm/new",
+    name: "categoryNewForm",
     componentPath: "CategoryForm",
     requiresAuth: true,
     title: "Nueva Categoria",
@@ -139,6 +155,14 @@ const routeDefinitions = [
     componentPath: "RequestForm",
     requiresAuth: true,
     title: "Nueva Solicitud",
+  },
+  {
+    path: "/requestDetailView/:id",
+    name: "requestDetailView",
+    componentPath: "RequestDetailView",
+    props: true,
+    requiresAuth: true,
+    title: "Revisar Solicitud",
   },
   {
     path: "/newBook",

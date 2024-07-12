@@ -65,9 +65,25 @@ const adminMenu = [
 
 const publisherMenu = [
   {
+    header: "Generales",
+  },
+  {
+    to: "/books",
+    label: "Catálogo sumeria",
+    icon: mdiBookOpen,
+  },
+  {
+    header: "Mi espacio",
+  },
+  {
     to: "/requests",
     label: "Solicitudes",
     icon: mdiPencilMinus,
+  },
+  {
+    to: "/publisherBooksView",
+    label: "Mis libros",
+    icon: mdiBookOpen,
   },
 ];
 

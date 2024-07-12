@@ -7,134 +7,143 @@
         main
       />
 
-      <CardBox>
+      <CardBox class="max-w-4xl mx-auto">
         <div v-if="loading" class="flex items-center justify-center p-4">
-          <div
-            class="loader border-4 border-gray-200 border-t-4 border-t-blue-500 rounded-full w-10 h-10 animate-spin"
-          ></div>
+          <div class="loader border-4 border-gray-200 border-t-4 border-t-blue-500 rounded-full w-8 h-8 animate-spin"></div>
         </div>
-        <div v-else-if="request">
-          <div class="mb-4">
-            <h2 class="text-2xl font-bold mb-2">Información de la Editorial</h2>
-            <p>
-              <strong>Nombre:</strong>
-              {{ request.razonSocial || request.nombres }}
-            </p>
-            <p><strong>RUC:</strong> {{ request.ruc || "N/A" }}</p>
-            <p><strong>Correo:</strong> {{ request.email }}</p>
-            <p><strong>Dirección:</strong> {{ request.direccion || "N/A" }}</p>
-            <p><strong>Ciudad:</strong> {{ request.ciudad || "N/A" }}</p>
-            <p>
-              <strong>Provincia:</strong> {{ request.departamento || "N/A" }}
-            </p>
-            <p><strong>Teléfono:</strong> {{ request.telefono || "N/A" }}</p>
-            <p>
-              <strong>Página web:</strong>
-              <a
-                :href="request.paginaWeb"
-                target="_blank"
-                class="text-blue-500"
-                >{{ request.paginaWeb || "N/A" }}</a
-              >
-            </p>
+        <div v-else-if="submitError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+          <strong class="font-bold">Error!</strong>
+          <span>{{ submitError }}</span>
+        </div>
+        <div v-else class="space-y-4">
+          <div v-for="(value, key) in formFields" :key="key" class="border rounded-lg p-4">
+            <label class="block font-bold text-sm mb-1">{{ fieldLabels[key] }}</label>
+            <component
+              :is="key.includes('description') ? 'textarea' : 'input'"
+              :type="key.includes('description') ? undefined : 'text'"
+              :value="value"
+              disabled
+              class="border rounded px-3 py-2 w-full bg-gray-50"
+              :rows="key.includes('description') ? 3 : undefined"
+            />
           </div>
-          <div class="mb-4">
-            <h3 class="text-xl font-bold mb-2">Observaciones</h3>
-            <textarea
-              v-model="observation"
-              class="w-full p-2 border rounded"
-              rows="4"
-              placeholder="Escribe tus observaciones aquí..."
-            ></textarea>
-          </div>
-          <div class="flex space-x-2">
+
+          <BaseDivider class="my-6" />
+
+          <div class="flex justify-end space-x-2">
             <BaseButton
-              @click="approveRequest"
               color="success"
-              :disabled="sending"
-              :icon="mdiCheck"
-            >
-              <template #loading>
-                <span
-                  class="loader border-4 border-gray-200 border-t-4 border-t-blue-500 rounded-full w-5 h-5 animate-spin"
-                ></span>
-              </template>
-              Aprobar
-            </BaseButton>
+              :icon="mdiCheckCircle"
+              @click="approveRequest"
+              :disabled="loading"
+              label="Aprobar y crear cuenta"
+            />
             <BaseButton
-              @click="rejectRequest"
               color="danger"
-              :disabled="sending"
-              :icon="mdiClose"
-            >
-              <template #loading>
-                <span
-                  class="loader border-4 border-gray-200 border-t-4 border-t-blue-500 rounded-full w-5 h-5 animate-spin"
-                ></span>
-              </template>
-              Rechazar
-            </BaseButton>
+              :icon="mdiCloseCircle"
+              @click="openRejectModal"
+              :disabled="loading"
+              label="Rechazar solicitud"
+            />
           </div>
-        </div>
-        <div v-else class="text-center text-red-500">
-          <p>No se encontró la solicitud.</p>
         </div>
       </CardBox>
+
+      <CardBoxModal
+        v-model="isRejectModalOpen"
+        title="Rechazar Solicitud"
+        button="danger"
+        buttonLabel="Enviar"
+        :hasCancel="true"
+        @confirm="handleRejectConfirm"
+      >
+        <textarea v-model="rejectionReason" class="border rounded px-3 py-2 w-full" rows="5" placeholder="Ingrese las observaciones..."></textarea>
+      </CardBoxModal>
     </SectionMain>
   </LayoutAuthenticated>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
-import { useRouter, useRoute } from "vue-router";
+import { ref, reactive, computed, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { mdiBookOpenPageVariant, mdiCheckCircle, mdiCloseCircle } from '@mdi/js';
 import { doc, getDoc, deleteDoc, setDoc } from "firebase/firestore";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { db } from "@/firebase";
 import emailjs from "@emailjs/browser";
-import { mdiBookOpenPageVariant, mdiCheck, mdiClose } from "@mdi/js";
-import BaseButton from "@/components/BaseButton.vue";
-import SectionMain from "@/components/SectionMain.vue";
-import CardBox from "@/components/CardBox.vue";
-import LayoutAuthenticated from "@/layouts/LayoutAuthenticated.vue";
-import SectionTitleLineWithButton from "@/components/SectionTitleLineWithButton.vue";
+import SectionMain from '@/components/SectionMain.vue';
+import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue';
+import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.vue';
+import CardBox from '@/components/CardBox.vue';
+import BaseButton from '@/components/BaseButton.vue';
+import BaseDivider from '@/components/BaseDivider.vue';
+import CardBoxModal from '@/components/CardBoxModal.vue';
 
-const router = useRouter();
 const route = useRoute();
-
+const router = useRouter();
 const requestId = route.params.id;
-const request = ref(null);
-const loading = ref(true);
-const observation = ref("");
-const sending = ref(false);
 
-const fetchRequest = async () => {
+const form = reactive({});
+const originalForm = reactive({});
+const loading = ref(false);
+const submitError = ref(null);
+const isRejectModalOpen = ref(false);
+const rejectionReason = ref('');
+
+const fieldLabels = {
+  razonSocial: 'Nombre',
+  ruc: 'RUC',
+  email: 'Correo',
+  direccion: 'Dirección',
+  ciudad: 'Ciudad',
+  departamento: 'Provincia',
+  telefono: 'Teléfono',
+  paginaWeb: 'Página web',
+};
+
+const formFields = computed(() => {
+  return Object.keys(fieldLabels).reduce((acc, key) => {
+    acc[key] = form[key];
+    return acc;
+  }, {});
+});
+
+onMounted(async () => {
+  loading.value = true;
   try {
-    if (!requestId) {
-      throw new Error("requestId is not defined");
-    }
-
     const docRef = doc(db, "newPublisherRequest", requestId);
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-      request.value = docSnap.data();
+      const data = docSnap.data();
+      Object.assign(form, data);
+      Object.assign(originalForm, data);
     } else {
-      console.error("No such document!");
+      submitError.value = 'No se encontró la solicitud.';
     }
-    loading.value = false;
   } catch (error) {
-    console.error("Error fetching request:", error);
+    submitError.value = 'Error fetching request data';
+  } finally {
     loading.value = false;
   }
+
+  window.addEventListener('beforeunload', handleBeforeUnload);
+});
+
+const handleBeforeUnload = (event) => {
+  event.preventDefault();
+  event.returnValue = '';
 };
 
 const generatePassword = () => {
-  const chars =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()";
   let password = "";
-  for (let i = 0; i < 8; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
+  do {
+    password = "";
+    for (let i = 0; i < 8; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+  } while (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password) || !/[!@#$%^&*()]/.test(password));
   return password;
 };
 
@@ -146,105 +155,108 @@ const sendEmailNotification = async (email, subject, message) => {
   };
 
   try {
-    await emailjs.send(
-      import.meta.env.VITE_EMAILJS_SERVICE_ID,
-      import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
-      templateParams,
-      import.meta.env.VITE_EMAILJS_USER_ID
-    );
+    const result = await Promise.race([
+      emailjs.send(
+        import.meta.env.VITE_EMAILJS_SERVICE_ID,
+        import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+        templateParams,
+        import.meta.env.VITE_EMAILJS_USER_ID
+      ),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Email sending timed out')), 10000)
+      )
+    ]);
+    
     console.log("Correo enviado correctamente");
+    return { success: true, result };
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error al enviar el correo:", error);
+    throw new Error(`Failed to send email: ${error.message}`);
   }
 };
 
 const approveRequest = async () => {
-  if (!request.value) return;
-
-  sending.value = true;
-  const auth = getAuth();
-  const password = generatePassword();
+  loading.value = true;
+  submitError.value = null;
 
   try {
-    const userCredential = await createUserWithEmailAndPassword(
-      auth,
-      request.value.email,
-      password
-    );
+    const auth = getAuth();
+    const password = generatePassword();
+
+    const userCredential = await createUserWithEmailAndPassword(auth, form.email, password);
     const user = userCredential.user;
 
     const subject = "Bienvenido a Nuestra Plataforma";
-    const message = `Hola ${request.value.razonSocial || request.value.nombres},
+    const message = `Hola ${form.razonSocial},
                      Bienvenido a nuestra plataforma. Su cuenta ha sido creada exitosamente.
-                     Email: ${request.value.email}
+                     Email: ${form.email}
                      Contraseña: ${password}
                     `;
 
-    await sendEmailNotification(request.value.email, subject, message);
+    await sendEmailNotification(form.email, subject, message);
 
-    // Store the new user's data in the 'publishers' collection
     await setDoc(doc(db, "publishers", user.uid), {
-      email: request.value.email,
-      razonSocial: request.value.razonSocial || request.value.nombres,
-      ruc: request.value.ruc,
-      direccion: request.value.direccion,
-      ciudad: request.value.ciudad,
-      departamento: request.value.departamento,
-      telefono: request.value.telefono,
-      paginaWeb: request.value.paginaWeb,
+      email: form.email,
+      razonSocial: form.razonSocial,
+      ruc: form.ruc,
+      direccion: form.direccion,
+      ciudad: form.ciudad,
+      departamento: form.departamento,
+      telefono: form.telefono,
+      paginaWeb: form.paginaWeb,
       createdAt: new Date(),
     });
 
     await deleteDoc(doc(db, "newPublisherRequest", requestId));
     router.push("/publisher-requests");
   } catch (error) {
-    console.error("Error approving request:", error);
+    console.error('Error approving request:', error);
+    submitError.value = 'Error creating publisher account: ' + (error.response?.data?.message || error.message);
   } finally {
-    sending.value = false;
+    loading.value = false;
   }
 };
 
-const rejectRequest = async () => {
-  if (!request.value || !observation.value) return;
+const openRejectModal = () => {
+  isRejectModalOpen.value = true;
+};
 
-  sending.value = true;
+const handleRejectConfirm = async () => {
+  loading.value = true;
+  submitError.value = null;
 
   try {
     const subject = "Solicitud Rechazada";
-    const message = `<p>Hola ${
-      request.value.razonSocial || request.value.nombres
-    },</p>
-                     <p>Lamentamos informarle que su solicitud ha sido rechazada por las siguientes razones:</p>
-                     <p>${observation.value}</p>
-                     <p>Saludos,<br/>Su Equipo</p>`;
+    const message = `Hola ${form.razonSocial},
+                     Lamentamos informarle que su solicitud ha sido rechazada por las siguientes razones:
+                     Observaciones: ${rejectionReason.value}
+                     
+                     Saludos Cordiales
+                     
+                     Sumeria
+                     `;
 
-    await sendEmailNotification(request.value.email, subject, message);
+    await sendEmailNotification(form.email, subject, message);
 
-    await setDoc(doc(db, "declinedPublisherRequest", requestId), request.value);
+    await setDoc(doc(db, "declinedPublisherRequest", requestId), {
+      ...form,
+      rejectionReason: rejectionReason.value,
+    });
     await deleteDoc(doc(db, "newPublisherRequest", requestId));
 
     router.push("/publisher-requests");
   } catch (error) {
-    console.error("Error rejecting request:", error);
+    console.error('Error rejecting request:', error);
+    submitError.value = 'Error rejecting request';
   } finally {
-    sending.value = false;
+    loading.value = false;
+    isRejectModalOpen.value = false;
   }
 };
-
-onMounted(() => {
-  fetchRequest();
-});
 </script>
 
 <style scoped>
 .loader {
-  border-top-color: #3498db;
-  animation: spinner 0.6s linear infinite;
-}
-
-@keyframes spinner {
-  to {
-    transform: rotate(360deg);
-  }
+  border-top-color: #3490dc;
 }
 </style>

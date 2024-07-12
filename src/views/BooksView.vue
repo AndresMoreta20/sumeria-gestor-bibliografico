@@ -1,6 +1,5 @@
 <script setup>
 import { ref, onMounted } from "vue";
-import axios from "axios";
 import { mdiBook } from "@mdi/js";
 import SectionMain from "@/components/SectionMain.vue";
 import LayoutAuthenticated from "@/layouts/LayoutAuthenticated.vue";
@@ -10,27 +9,16 @@ import TableBooks from "@/components/TableBooks.vue";
 import BookDetail from "@/components/BookDetail.vue";
 import LoadingIndicator from '@/components/LoadingIndicator.vue';
 import CardBoxModal from '@/components/CardBoxModal.vue';
-
-const consumerKey = import.meta.env.VITE_APP_CONSUMER_KEY;
-const consumerSecret = import.meta.env.VITE_APP_CONSUMER_SECRET;
+import { fetchBooks } from '@/api/woocommerce';
 
 const books = ref([]);
 const selectedBookId = ref(null);
 const loading = ref(true);
 
-const fetchBooks = async () => {
+const loadBooks = async () => {
   try {
     loading.value = true;
-    const response = await axios.get(
-      "https://cindyl23.sg-host.com/wp-json/wc/v3/products?per_page=100",
-      {
-        auth: {
-          username: consumerKey,
-          password: consumerSecret,
-        },
-      }
-    );
-    books.value = response.data;
+    books.value = await fetchBooks();
   } catch (error) {
     console.error("Error fetching books:", error);
   } finally {
@@ -46,7 +34,7 @@ const closeDetailView = () => {
   selectedBookId.value = null;
 };
 
-onMounted(fetchBooks);
+onMounted(loadBooks);
 </script>
 
 <template>

@@ -1,29 +1,142 @@
-<script setup>
-import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { mdiBook, mdiEye, mdiDelete } from '@mdi/js';
-import SectionMain from '@/components/SectionMain.vue';
-import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue';
-import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.vue';
-import CardBox from '@/components/CardBox.vue';
-import { fetchPublisherRequests, deletePublisherRequest } from '@/api/firebase';
+<template>
+  <LayoutAuthenticated>
+    <SectionMain>
+      <SectionTitleLineWithButton
+        :icon="mdiBookOutline"
+        title="Solicitudes de Editoriales"
+        main
+      />
+      <CardBox class="mb-6" has-table>
+        <div v-if="loading" class="flex items-center justify-center p-4">
+          <div
+            class="loader border-4 border-gray-200 border-t-4 border-t-blue-500 rounded-full w-8 h-8 animate-spin"
+          ></div>
+        </div>
+        <div v-if="error" class="text-red-500 p-4">{{ error }}</div>
+        <div v-else>
+          <div class="mb-4 flex flex-wrap gap-4">
+            <div class="relative">
+              <input
+                v-model="filters.search"
+                class="pl-10 px-4 py-2 border rounded"
+                placeholder="Buscar por nombre o correo"
+                @input="applyFilters"
+              />
+              <BaseIcon
+                :path="mdiMagnify"
+                class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              />
+            </div>
+          </div>
 
+          <table class="table-auto w-full">
+            <thead>
+              <tr>
+                <th class="px-4 py-2">Nombre</th>
+                <th class="px-4 py-2">RUC</th>
+                <th class="px-4 py-2">Correo</th>
+                <th class="px-4 py-2">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="request in paginatedRequests" :key="request.id">
+                <td class="border px-4 py-2">{{ request.razonSocial }}</td>
+                <td class="border px-4 py-2">{{ request.ruc }}</td>
+                <td class="border px-4 py-2">{{ request.email }}</td>
+                <td class="border px-4 py-2 flex justify-center space-x-2">
+                  <BaseButton
+                    color="info"
+                    :icon="mdiEye"
+                    small
+                    @click="() => viewRequest(request.id)"
+                  />
+                  <BaseButton
+                    color="danger"
+                    :icon="mdiDelete"
+                    small
+                    @click="() => removeRequest(request.id)"
+                    :disabled="loadingStates[request.id]"
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Paginación -->
+          <div class="mt-4 flex justify-between items-center">
+            <span>
+              Mostrando {{ paginatedRequests.length }} de {{ filteredRequests.length }} solicitudes
+            </span>
+            <div class="space-x-2">
+              <BaseButton
+                :disabled="currentPage === 1"
+                @click="currentPage--"
+                :icon="mdiChevronLeft"
+                small
+              />
+              <span>Página {{ currentPage }} de {{ totalPages }}</span>
+              <BaseButton
+                :disabled="currentPage === totalPages"
+                @click="currentPage++"
+                :icon="mdiChevronRight"
+                small
+              />
+            </div>
+          </div>
+        </div>
+      </CardBox>
+    </SectionMain>
+  </LayoutAuthenticated>
+</template>
+
+<script setup>
+import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import { fetchPublisherRequests, deletePublisherRequest } from "@/api/firebase";
+
+import SectionMain from "@/components/SectionMain.vue";
+import LayoutAuthenticated from "@/layouts/LayoutAuthenticated.vue";
+import SectionTitleLineWithButton from "@/components/SectionTitleLineWithButton.vue";
+import CardBox from "@/components/CardBox.vue";
+import BaseButton from "@/components/BaseButton.vue";
+import BaseIcon from "@/components/BaseIcon.vue";
+import {
+  mdiBookOutline,
+  mdiMagnify,
+  mdiEye,
+  mdiDelete,
+  mdiChevronLeft,
+  mdiChevronRight,
+} from "@mdi/js";
+
+const router = useRouter();
 const requests = ref([]);
 const loading = ref(true);
+const error = ref(null);
 const loadingStates = ref({});
-const router = useRouter();
 
-const loadRequests = async () => {
+const filters = ref({
+  search: "",
+});
+
+const currentPage = ref(1);
+const itemsPerPage = 10;
+
+const fetchRequestsData = async () => {
+  loading.value = true;
+  error.value = null;
   try {
     requests.value = await fetchPublisherRequests();
-    loading.value = false;
-  } catch (error) {
+  } catch (err) {
+    console.error("Error fetching requests:", err);
+    error.value = "Failed to load requests.";
+  } finally {
     loading.value = false;
   }
 };
 
 const viewRequest = (requestId) => {
-  router.push({ name: 'PublisherCheckView', params: { id: requestId } });
+  router.push({ name: "PublisherCheckView", params: { id: requestId } });
 };
 
 const removeRequest = async (requestId) => {
@@ -31,7 +144,7 @@ const removeRequest = async (requestId) => {
     try {
       loadingStates.value[requestId] = true;
       await deletePublisherRequest(requestId);
-      await loadRequests();
+      await fetchRequestsData();
     } catch (error) {
       console.error('Error deleting request:', error);
     } finally {
@@ -40,69 +153,35 @@ const removeRequest = async (requestId) => {
   }
 };
 
-onMounted(loadRequests);
-</script>
+const applyFilters = () => {
+  currentPage.value = 1;
+};
 
-<template>
-  <LayoutAuthenticated>
-    <SectionMain>
-      <SectionTitleLineWithButton :icon="mdiBook" title="Solicitudes de Editoriales" main />
-      
-      <CardBox class="mb-6" has-table>
-        <div v-if="loading" class="flex items-center justify-center p-4">
-          <div class="loader border-4 border-gray-200 border-t-4 border-t-blue-500 rounded-full w-5 h-5 animate-spin"></div>
-        </div>
-        <div v-else>
-          <table class="min-w-full bg-white">
-            <thead>
-              <tr>
-                <th class="py-2 px-3 border-b border-gray-300">Nombre</th>
-                <th class="py-2 px-3 border-b border-gray-300">RUC</th>
-                <th class="py-2 px-3 border-b border-gray-300">Correo</th>
-                <th class="py-2 px-3 border-b border-gray-300">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="request in requests" :key="request.id">
-                <td class="py-2 px-3 border-b border-gray-300">{{ request.razonSocial }}</td>
-                <td class="py-2 px-3 border-b border-gray-300">{{ request.ruc }}</td>
-                <td class="py-2 px-3 border-b border-gray-300">{{ request.email }}</td>
-                <td class="py-2 px-3 border-b border-gray-300 flex space-x-2">
-                  <button 
-                    @click="viewRequest(request.id)" 
-                    class="bg-blue-500 text-white px-2 py-2 rounded-full shadow hover:bg-blue-600 transition duration-300 flex items-center justify-center"
-                  >
-                    <span class="mdi mdi-eye"></span>
-                  </button>
-                  <button 
-                    @click="removeRequest(request.id)" 
-                    class="bg-red-500 text-white px-2 py-2 rounded-full shadow hover:bg-red-600 transition duration-300 flex items-center justify-center"
-                    :disabled="loadingStates[request.id]"
-                  >
-                    <span class="mdi mdi-delete"></span>
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </CardBox>
-    </SectionMain>
-  </LayoutAuthenticated>
-</template>
+const filteredRequests = computed(() => {
+  return requests.value.filter((request) => {
+    const searchMatch =
+      filters.value.search.toLowerCase() === "" ||
+      request.razonSocial.toLowerCase().includes(filters.value.search.toLowerCase()) ||
+      request.email.toLowerCase().includes(filters.value.search.toLowerCase());
+    return searchMatch;
+  });
+});
+
+const paginatedRequests = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage;
+  const end = start + itemsPerPage;
+  return filteredRequests.value.slice(start, end);
+});
+
+const totalPages = computed(() =>
+  Math.ceil(filteredRequests.value.length / itemsPerPage)
+);
+
+onMounted(fetchRequestsData);
+</script>
 
 <style scoped>
 .loader {
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #3498db;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  animation: spin 2s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  border-top-color: #3490dc;
 }
 </style>

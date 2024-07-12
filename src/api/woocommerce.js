@@ -1,4 +1,3 @@
-// woocommerce.js
 import axios from "axios";
 
 const apiClient = axios.create({
@@ -57,6 +56,35 @@ export const fetchCategoryById = async (id) => {
     return response.data;
   } catch (error) {
     console.error(`Error fetching category by ID (${id}):`, error);
+    throw error;
+  }
+};
+
+export const createCategory = async (name) => {
+  try {
+    const response = await apiClient.post(
+      "/products/categories",
+      { name },
+      {
+        auth: getAuth().auth,
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error creating category:", error);
+    throw error;
+  }
+};
+
+export const fetchCategoryByName = async (name) => {
+  try {
+    const response = await apiClient.get("/products/categories", {
+      params: { search: name },
+      auth: getAuth().auth,
+    });
+    return response.data.length > 0 ? response.data[0] : null;
+  } catch (error) {
+    console.error("Error fetching category by name:", error);
     throw error;
   }
 };
@@ -218,6 +246,44 @@ export const checkSkuExists = async (sku) => {
     return response.data.length > 0;
   } catch (error) {
     console.error("Error checking SKU:", error);
+    throw error;
+  }
+};
+
+export const updateProductById = async (productId, updatedData) => {
+  try {
+    const response = await apiClient.put(
+      `/products/${productId}`,
+      updatedData,
+      getAuth()
+    );
+    return response.data;
+  } catch (error) {
+    console.error(`Error updating product with ID (${productId}):`, error);
+    throw error;
+  }
+};
+
+export const fetchTrashedProducts = async () => {
+  try {
+    const data = await fetchAllPages("/products", { status: "trash" });
+    return data;
+  } catch (error) {
+    console.error("Error fetching trashed products:", error);
+    throw error;
+  }
+};
+
+export const restoreProduct = async (productId) => {
+  try {
+    const response = await apiClient.put(
+      `/products/${productId}`,
+      { status: "publish" },
+      getAuth()
+    );
+    return response.data;
+  } catch (error) {
+    console.error(`Error restoring product with ID (${productId}):`, error);
     throw error;
   }
 };

@@ -1,9 +1,10 @@
+<!-- PublishersView.vue -->
 <script setup>
+import { ref, onMounted } from 'vue'
 import DataTableView from '@/components/DataTableView.vue'
 import { mdiTableBorder } from '@mdi/js'
 import { fetchPublishers } from '@/api/woocommerce'
 
-const endpoint = 'https://cindyl23.sg-host.com/wp-json/wc/v3/products/attributes/2/terms'
 const title = 'Publishers'
 const columns = ['id', 'name']
 const columnLabels = { id: 'ID', name: 'Nombre' }
@@ -18,17 +19,26 @@ const transformData = (data) => {
     }
   })
 }
+
+const dataFetchFunction = async () => {
+  try {
+    const data = await fetchPublishers()
+    return transformData(data)
+  } catch (error) {
+    console.error('Error fetching publishers:', error)
+    throw error
+  }
+}
 </script>
 
 <template>
   <DataTableView
-    :endpoint="endpoint"
     :title="title"
     :columns="columns"
     :column-labels="columnLabels"
     :icon="icon"
     :checkable="checkable"
-    :data-transform="transformData"
+    :dataFetchFunction="dataFetchFunction"
     new-route="PublisherForm" 
   />
 </template>

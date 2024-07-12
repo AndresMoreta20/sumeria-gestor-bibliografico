@@ -263,3 +263,27 @@ export const updateProductById = async (productId, updatedData) => {
     throw error;
   }
 };
+
+export const fetchTrashedProducts = async () => {
+  try {
+    const data = await fetchAllPages("/products", { status: "trash" });
+    return data;
+  } catch (error) {
+    console.error("Error fetching trashed products:", error);
+    throw error;
+  }
+};
+
+export const restoreProduct = async (productId) => {
+  try {
+    const response = await apiClient.put(
+      `/products/${productId}`,
+      { status: "publish" },
+      getAuth()
+    );
+    return response.data;
+  } catch (error) {
+    console.error(`Error restoring product with ID (${productId}):`, error);
+    throw error;
+  }
+};

@@ -263,7 +263,8 @@ const approveRequest = async () => {
 
     console.log('Book uploaded successfully:', response);
 
-    await approveRequestFirebase({...form, id: requestId});
+    await approveRequestFirebase(form); // Enviar form sin ID duplicado
+
     router.push('/requestsAdmin');
   } catch (error) {
     console.error('Error approving request:', error);

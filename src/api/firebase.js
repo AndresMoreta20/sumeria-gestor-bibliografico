@@ -21,15 +21,39 @@ export const fetchRequests = async () => {
   }
 };
 
+// src/api/firebase.js
+// src/api/firebase.js
+
 // Fetch a specific request by ID
 export const fetchRequestById = async (requestId) => {
   try {
-    const requestDoc = await getDoc(doc(db, "bookRequests", requestId));
+    let requestDoc;
+
+    // Check in bookRequests collection
+    console.log(`Fetching from bookRequests with ID: ${requestId}`);
+    requestDoc = await getDoc(doc(db, "bookRequests", requestId));
     if (requestDoc.exists()) {
-      return { id: requestDoc.id, ...requestDoc.data() };
-    } else {
-      throw new Error("Request not found");
+      console.log("Found in bookRequests:", requestDoc.data());
+      return { id: requestDoc.id, ...requestDoc.data(), status: "pending" };
     }
+
+    // Check in approvedBooks collection
+    console.log(`Fetching from approvedBooks with ID: ${requestId}`);
+    requestDoc = await getDoc(doc(db, "approvedBooks", requestId));
+    if (requestDoc.exists()) {
+      console.log("Found in approvedBooks:", requestDoc.data());
+      return { id: requestDoc.id, ...requestDoc.data(), status: "approved" };
+    }
+
+    // Check in declinedBooks collection
+    console.log(`Fetching from declinedBooks with ID: ${requestId}`);
+    requestDoc = await getDoc(doc(db, "declinedBooks", requestId));
+    if (requestDoc.exists()) {
+      console.log("Found in declinedBooks:", requestDoc.data());
+      return { id: requestDoc.id, ...requestDoc.data(), status: "declined" };
+    }
+
+    throw new Error("Request not found");
   } catch (error) {
     console.error("Error fetching request:", error);
     throw error;
@@ -94,9 +118,24 @@ export const deleteRequest = async (requestId) => {
 };
 
 // Approve a request and move it to the approvedBooks collection
+// src/api/firebase.js
+
+// Approve a request and move it to the approvedBooks collection
 export const approveRequest = async (request) => {
   try {
-    await addDoc(collection(db, "approvedBooks"), request);
+    const docRef = doc(db, "bookRequests", request.id);
+    const docSnapshot = await getDoc(docRef);
+    if (!docSnapshot.exists()) {
+      throw new Error("Request not found");
+    }
+
+    const requestData = {
+      ...docSnapshot.data(),
+      idOriginalRequest: request.id,
+    }; // Preservar el ID original y eliminar el campo id
+    delete requestData.id;
+
+    await addDoc(collection(db, "approvedBooks"), requestData); // Insertar sin el campo id duplicado
     await deleteRequest(request.id);
   } catch (error) {
     console.error("Error approving request:", error);
@@ -250,6 +289,28 @@ export const fetchRejectedRequests = async () => {
     return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
     console.error("Error fetching rejected requests:", error);
+    throw error;
+  }
+};
+
+// Fetch approved requests
+export const fetchApprovedRequests = async () => {
+  try {
+    const querySnapshot = await getDocs(collection(db, "approvedBooks"));
+    return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error("Error fetching approved requests:", error);
+    throw error;
+  }
+};
+
+// Fetch declined requests
+export const fetchDeclinedRequests = async () => {
+  try {
+    const querySnapshot = await getDocs(collection(db, "declinedBooks"));
+    return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error("Error fetching declined requests:", error);
     throw error;
   }
 };

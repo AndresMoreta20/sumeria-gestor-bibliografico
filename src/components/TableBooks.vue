@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import { fetchCategories, toggleBookStatus, fetchBooks as apiFetchBooks } from "@/api/woocommerce";
+import { fetchCategories, toggleBookStatus, fetchBooks as apiFetchBooks, fetchTrashedProducts, restoreProduct } from "@/api/woocommerce";
 import FormCheckRadio from "@/components/FormCheckRadio.vue"; 
 import FormControl from "@/components/FormControl.vue";
 import LoadingIndicator from '@/components/LoadingIndicator.vue';
@@ -78,8 +78,22 @@ const fetchBooks = async () => {
     loading.value = true;
     const response = await apiFetchBooks();
     books.value = response;
+    console.log("Books fetched:", response);
   } catch (error) {
     console.error("Error fetching books:", error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const fetchTrashedBooks = async () => {
+  try {
+    loading.value = true;
+    const response = await fetchTrashedProducts();
+    books.value = response;
+    console.log("Trashed books fetched:", response);
+  } catch (error) {
+    console.error("Error fetching trashed books:", error);
   } finally {
     loading.value = false;
   }
@@ -98,6 +112,7 @@ const loadCategories = async () => {
     categoriesLoading.value = true;
     const response = await fetchCategories();
     categories.value = response.data;
+    console.log("Categories fetched:", response.data);
   } catch (error) {
     console.error("Error al obtener categorías:", error);
   } finally {
@@ -108,12 +123,16 @@ const loadCategories = async () => {
 const updateBookStatus = async (bookId, status) => {
   try {
     loading.value = true;
-    await toggleBookStatus(bookId, status);
+    if (status === 'trash') {
+      await toggleBookStatus(bookId, status);
+    } else {
+      await restoreProduct(bookId);
+    }
     await fetchBooks();
     isSuccessModalActive.value = true;
   } catch (error) {
-    console.error(`Error al ${status === 'private' ? 'desactivar' : 'activar'} el libro:`, error.response?.data || error);
-    alert(`Error al ${status === 'private' ? 'desactivar' : 'activar'} el libro`);
+    console.error(`Error al ${status === 'publish' ? 'activar' : 'desactivar'} el libro:`, error.response?.data || error);
+    alert(`Error al ${status === 'publish' ? 'activar' : 'desactivar'} el libro`);
   } finally {
     loading.value = false;
   }
@@ -121,7 +140,7 @@ const updateBookStatus = async (bookId, status) => {
 
 const confirmUpdateStatus = () => {
   if (bookToUpdate.value) {
-    updateBookStatus(bookToUpdate.value.id, bookToUpdate.value.status === 'publish' ? 'private' : 'publish');
+    updateBookStatus(bookToUpdate.value.id, bookToUpdate.value.status === 'publish' ? 'trash' : 'publish');
     isModalDangerActive.value = false;
   }
 };
@@ -129,10 +148,20 @@ const confirmUpdateStatus = () => {
 const openDeactivateModal = (book) => {
   bookToUpdate.value = book;
   isModalDangerActive.value = true;
+  console.log("Deactivate modal opened for book:", book);
 };
 
 const goToPage = (pageNumber) => {
   currentPage.value = pageNumber;
+};
+
+const handleAvailabilitySwitch = async () => {
+  console.log("Switch availability changed to:", showAvailable.value);
+  if (showAvailable.value) {
+    await fetchBooks();
+  } else {
+    await fetchTrashedBooks();
+  }
 };
 
 onMounted(async () => {
@@ -187,6 +216,7 @@ onMounted(async () => {
           type="switch"
           label=""
           :input-value="true"
+          @change="handleAvailabilitySwitch"
         />
       </div>
       <button v-if="userRole !== 'publisher'" @click="goToNewBook" class="bg-blue-500 text-white p-2 rounded">

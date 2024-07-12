@@ -28,36 +28,30 @@
               />
             </div>
             <div class="relative">
-      <select
-        v-model="filters.category"
-        class="appearance-none bg-transparent pr-8 pl-4 py-2 border rounded"
-        @change="applyFilters"
-      >
-        <option value="">Todas las categorías</option>
-        <option v-for="category in categories" :key="category.id" :value="category.id">
-          {{ category.name }}
-        </option>
-      </select>
-      <BaseIcon
-        :path="mdiFilterMenu"
-        class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
-      />
-    </div>
-    <div class="relative">
-      <select
-        v-model="filters.status"
-        class="appearance-none bg-transparent pr-8 pl-4 py-2 border rounded"
-        @change="applyFilters"
-      >
-        <option value="">Todos los estados</option>
-        <option value="pending">Pendiente</option>
-        <option value="archived">Archivado</option>
-      </select>
-      <BaseIcon
-        :path="mdiFilterOutline"
-        class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
-      />
-    </div>
+              <select
+                v-model="filters.category"
+                class="appearance-none bg-transparent pr-8 pl-4 py-2 border rounded"
+                @change="applyFilters"
+              >
+                <option value="">Todas las categorías</option>
+                <option v-for="category in categories" :key="category.id" :value="category.id">
+                  {{ category.name }}
+                </option>
+              </select>
+            </div>
+            <div class="relative">
+              <select
+                v-model="filters.status"
+                class="appearance-none bg-transparent pr-8 pl-4 py-2 border rounded"
+                @change="applyFilters"
+              >
+                <option value="">Todos los estados</option>
+                <option value="pending">Pendiente</option>
+                <option value="archived">Archivado</option>
+                <option value="approved">Aprobada</option>
+                <option value="declined">Rechazada</option>
+              </select>
+            </div>
           </div>
 
           <table class="table-auto w-full">
@@ -67,6 +61,8 @@
                 <th class="px-4 py-2">Autor</th>
                 <th class="px-4 py-2">Categoría</th>
                 <th class="px-4 py-2">Estado</th>
+                <th class="px-4 py-2">Fecha</th>
+                <th class="px-4 py-2">Hora</th>
                 <th class="px-4 py-2">Acciones</th>
               </tr>
             </thead>
@@ -82,12 +78,18 @@
                     translateStatus(request.status)
                   }}</span>
                 </td>
+                <td class="border px-4 py-2">
+                  {{ new Date(request.createdAt.seconds * 1000).toLocaleDateString() }}
+                </td>
+                <td class="border px-4 py-2">
+                  {{ new Date(request.createdAt.seconds * 1000).toLocaleTimeString() }}
+                </td>
                 <td class="border px-4 py-2 flex justify-center space-x-2">
                   <BaseButton
                     color="info"
                     :icon="mdiEye"
                     small
-                    @click="() => viewRequest(request.id)"
+                    @click="() => viewRequest(request)"
                   />
                   <BaseButton
                     :color="
@@ -138,7 +140,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import { fetchRequests, updateRequestStatus } from "@/api/firebase";
+import { fetchRequests, fetchApprovedRequests, fetchDeclinedRequests, fetchRequestById, updateRequestStatus } from "@/api/firebase";
 import { fetchCategories, fetchCategoryById } from "@/api/woocommerce";
 
 import SectionMain from "@/components/SectionMain.vue";
@@ -174,14 +176,24 @@ const filters = ref({
 
 const currentPage = ref(1);
 const itemsPerPage = 10;
-
 const fetchRequestsData = async () => {
   loading.value = true;
   error.value = null;
   try {
-    const data = await fetchRequests();
+    const [pendingRequests, approvedRequests, declinedRequests] = await Promise.all([
+      fetchRequests(),
+      fetchApprovedRequests(),
+      fetchDeclinedRequests()
+    ]);
+
+    const processedRequests = [
+      ...pendingRequests.map(req => ({ ...req, status: "pending" })),
+      ...approvedRequests.map(req => ({ id: req.id, ...req, status: "approved" })),  // Ensuring correct ID is used
+      ...declinedRequests.map(req => ({ id: req.id, ...req, status: "declined" }))  // Ensuring correct ID is used
+    ];
+
     requests.value = await Promise.all(
-      data.map(async (request) => {
+      processedRequests.map(async (request) => {
         const categoryName = await getCategoryName(request.category);
         return { ...request, categoryName };
       })
@@ -204,9 +216,15 @@ const fetchCategoriesData = async () => {
   }
 };
 
-const viewRequest = (requestId) => {
-  console.log(`Opening request ${requestId}...`);
-  router.push({ name: "requestDetailView", params: { id: requestId } });
+const viewRequest = async (request) => {
+  try {
+    console.log(`Opening request`, request);
+    const requestData = await fetchRequestById(request.id);
+    console.log('Request Data:', requestData);
+    router.push({ name: "requestDetailView", params: { id: request.id } });
+  } catch (error) {
+    console.error("Error viewing request:", error);
+  }
 };
 
 const toggleRequestStatus = async (request) => {
@@ -227,11 +245,17 @@ const toggleRequestStatus = async (request) => {
 };
 
 const statusClass = (status) => {
-  return status === "archived" ? "text-red-500" : "text-green-500";
+  if (status === "archived") return "text-red-500";
+  if (status === "approved") return "text-green-500";
+  if (status === "declined") return "text-yellow-500";
+  return "text-blue-500";
 };
 
 const translateStatus = (status) => {
-  return status === "archived" ? "Archivado" : "Pendiente";
+  if (status === "archived") return "Archivado";
+  if (status === "approved") return "Aprobada";
+  if (status === "declined") return "Rechazada";
+  return "Pendiente";
 };
 
 const applyFilters = () => {

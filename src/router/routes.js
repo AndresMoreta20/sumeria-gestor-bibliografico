@@ -165,6 +165,14 @@ const routeDefinitions = [
     title: "Revisar Solicitud",
   },
   {
+    path: "/readOnlyRequestDetailView/:id",
+    name: "readOnlyRequestDetailView",
+    componentPath: "ReadOnlyRequestDetailView",
+    props: true,
+    requiresAuth: true,
+    title: "Revisar Solicitud",
+  },
+  {
     path: "/newBook",
     name: "newBook",
     componentPath: "BookForm",

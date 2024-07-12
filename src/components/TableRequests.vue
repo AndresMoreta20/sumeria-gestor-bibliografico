@@ -1,226 +1,347 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { fetchRequests, deleteRequest, fetchRejectedRequests } from '@/api/firebase';
-import { fetchCategoryById, fetchAuthorById, fetchLanguageById, fetchPublisherById } from '@/api/woocommerce';
-import FormControl from '@/components/FormControl.vue';
-import LoadingIndicator from '@/components/LoadingIndicator.vue';
-import CardBoxModal from '@/components/CardBoxModal.vue';
-import BaseButtons from '@/components/BaseButtons.vue';
-import BaseButton from '@/components/BaseButton.vue';
-import BaseIcon from '@/components/BaseIcon.vue';
-import { mdiEye, mdiTrashCan, mdiCheckCircle } from '@mdi/js';
+import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import { fetchRequests, fetchApprovedRequests, fetchDeclinedRequests, fetchRequestById, updateRequestStatus, deleteRequest } from "@/api/firebase";
+import { fetchCategories, fetchCategoryById } from "@/api/woocommerce";
+
+import SectionMain from "@/components/SectionMain.vue";
+import LayoutAuthenticated from "@/layouts/LayoutAuthenticated.vue";
+import SectionTitleLineWithButton from "@/components/SectionTitleLineWithButton.vue";
+import CardBox from "@/components/CardBox.vue";
+import BaseButton from "@/components/BaseButton.vue";
+import BaseIcon from "@/components/BaseIcon.vue";
+import {
+  mdiBookOutline,
+  mdiMagnify,
+  mdiEye,
+  mdiArchiveOutline,
+  mdiRestore,
+  mdiChevronLeft,
+  mdiChevronRight,
+  mdiTrashCan,
+} from "@mdi/js";
 
 const router = useRouter();
 const requests = ref([]);
-const rejectedRequests = ref([]);
+const categories = ref([]);
 const loading = ref(true);
-const selectedCategory = ref("all");
-const searchQuery = ref('');
-const isModalDangerActive = ref(false);
-const isSuccessModalActive = ref(false);
-const requestToDelete = ref(null);
-const showRejectedRequests = ref(false);
+const error = ref(null);
+const loadingStates = ref({});
+
+const filters = ref({
+  search: "",
+  category: "",
+  status: "",
+});
 
 const currentPage = ref(1);
-const requestsPerPage = 8;
+const itemsPerPage = 10;
+const sortKey = ref('');
+const sortOrder = ref(1);
 
-const loadWooCommerceData = async (request) => {
+const userEmail = sessionStorage.getItem('user-email');
+const userName = sessionStorage.getItem('user-name');
+
+const fetchRequestsData = async () => {
+  loading.value = true;
+  error.value = null;
   try {
-    console.log(`Fetching WooCommerce data for request: ${JSON.stringify(request)}`);
-    request.categoryName = await fetchCategoryById(request.category).then(res => res.name);
-    request.authorName = await fetchAuthorById(request.author).then(res => res.name);
-    request.languageName = await fetchLanguageById(request.language).then(res => res.name);
-    request.publisherName = await fetchPublisherById(request.publisher).then(res => res.name);
-    console.log(`Fetched WooCommerce data: ${JSON.stringify(request)}`);
-  } catch (error) {
-    console.error('Error fetching WooCommerce data:', error);
-  }
-};
+    const [pendingRequests, approvedRequests, declinedRequests] = await Promise.all([
+      fetchRequests(),
+      fetchApprovedRequests(),
+      fetchDeclinedRequests()
+    ]);
 
-const loadRequests = async () => {
-  try {
-    requests.value = await fetchRequests();
-    console.log(`Fetched requests: ${JSON.stringify(requests.value)}`);
+    const allRequests = [
+      ...pendingRequests.map(req => ({ ...req, status: "pending" })),
+      ...approvedRequests.map(req => ({ ...req, status: "approved" })),
+      ...declinedRequests.map(req => ({ ...req, status: "declined" }))
+    ];
 
-    for (const request of requests.value) {
-      await loadWooCommerceData(request);
-    }
-  } catch (error) {
-    console.error('Error fetching requests:', error);
+    requests.value = await Promise.all(
+      allRequests
+        .filter(request => request.userEmail === userEmail || request.publisher === userName)
+        .map(async (request) => {
+          const categoryName = await getCategoryName(request.category);
+          return { ...request, categoryName };
+        })
+    );
+    console.log("Requests loaded:", requests.value);
+  } catch (err) {
+    console.error("Error fetching requests:", err);
+    error.value = "Failed to load requests.";
   } finally {
     loading.value = false;
   }
 };
 
-const loadRejectedRequests = async () => {
+const fetchCategoriesData = async () => {
   try {
-    rejectedRequests.value = await fetchRejectedRequests();
-    console.log(`Fetched rejected requests: ${JSON.stringify(rejectedRequests.value)}`);
+    const { data } = await fetchCategories();
+    categories.value = data;
+  } catch (err) {
+    console.error("Error fetching categories:", err);
+  }
+};
 
-    for (const request of rejectedRequests.value) {
-      await loadWooCommerceData(request);
-    }
+const viewRequest = async (request) => {
+  try {
+    console.log(`Opening request`, request);
+    const requestData = await fetchRequestById(request.id);
+    console.log('Request Data:', requestData);
+    router.push({ name: "readOnlyRequestDetailView", params: { id: request.id } });
   } catch (error) {
-    console.error('Error fetching rejected requests:', error);
+    console.error("Error viewing request:", error);
+  }
+};
+
+const toggleRequestStatus = async (request) => {
+  loadingStates.value[request.id] = true;
+  error.value = null;
+  try {
+    const newStatus = request.status === "archived" ? "pending" : "archived";
+    console.log(`Updating request ${request.id} status to ${newStatus}...`);
+    await updateRequestStatus(request.id, newStatus);
+    await fetchRequestsData();
+    console.log(`Request ${request.id} status updated to ${newStatus}.`);
+  } catch (err) {
+    console.error("Error updating request status:", err);
+    error.value = `Failed to update status for request ${request.id}.`;
   } finally {
-    loading.value = false;
+    loadingStates.value[request.id] = false;
+  }
+};
+
+const confirmDeleteRequest = async (requestId) => {
+  try {
+    await deleteRequest(requestId);
+    await fetchRequestsData();
+  } catch (error) {
+    console.error('Error deleting request:', error);
+  }
+};
+
+const statusClass = (status) => {
+  if (status === "archived") return "text-red-500";
+  if (status === "approved") return "text-green-500";
+  if (status === "declined") return "text-yellow-500";
+  return "text-blue-500";
+};
+
+const translateStatus = (status) => {
+  if (status === "archived") return "Archivado";
+  if (status === "approved") return "Aprobada";
+  if (status === "declined") return "Rechazada";
+  return "Pendiente";
+};
+
+const applyFilters = () => {
+  currentPage.value = 1;
+};
+
+const sortTable = (key) => {
+  if (sortKey.value === key) {
+    sortOrder.value *= -1;
+  } else {
+    sortKey.value = key;
+    sortOrder.value = 1;
   }
 };
 
 const filteredRequests = computed(() => {
-  let filtered = showRejectedRequests.value ? rejectedRequests.value : requests.value;
-  
-  // Obtener el email del usuario desde sessionStorage
-  const userEmail = sessionStorage.getItem('user-email');
-  const userName = sessionStorage.getItem('user-name');
+  const sortedRequests = [...requests.value].sort((a, b) => {
+    const aValue = a[sortKey.value];
+    const bValue = b[sortKey.value];
+    
+    if (aValue > bValue) return sortOrder.value;
+    if (aValue < bValue) return -sortOrder.value;
+    return 0;
+  });
 
-  // Filtrar las solicitudes por userEmail o publisher
-  filtered = filtered.filter(request => request.userEmail === userEmail || request.publisher === userName);
-  
-  if (selectedCategory.value !== "all") {
-    filtered = filtered.filter(request => request.categoryName === selectedCategory.value);
-  }
-  
-  if (searchQuery.value) {
-    filtered = filtered.filter(request =>
-      request.title.toLowerCase().includes(searchQuery.value.toLowerCase())
-    );
-  }
-  
-  return filtered;
+  return sortedRequests.filter((request) => {
+    const searchMatch =
+      filters.value.search.toLowerCase() === "" ||
+      request.title
+        .toLowerCase()
+        .includes(filters.value.search.toLowerCase()) ||
+      request.author.toLowerCase().includes(filters.value.search.toLowerCase());
+    const categoryMatch =
+      filters.value.category === "" ||
+      request.category === filters.value.category;
+    const statusMatch =
+      filters.value.status === "" || request.status === filters.value.status;
+    return searchMatch && categoryMatch && statusMatch;
+  });
 });
 
 const paginatedRequests = computed(() => {
-  const start = (currentPage.value - 1) * requestsPerPage;
-  const end = start + requestsPerPage;
+  const start = (currentPage.value - 1) * itemsPerPage;
+  const end = start + itemsPerPage;
   return filteredRequests.value.slice(start, end);
 });
 
-const totalPages = computed(() => Math.ceil(filteredRequests.value.length / requestsPerPage));
+const totalPages = computed(() =>
+  Math.ceil(filteredRequests.value.length / itemsPerPage)
+);
+
+const getCategoryName = async (categoryId) => {
+  try {
+    const category = await fetchCategoryById(categoryId);
+    return category.name;
+  } catch (error) {
+    console.error(`Error fetching category name for ID ${categoryId}:`, error);
+    return "Categoría desconocida";
+  }
+};
 
 const goToNewRequest = () => {
   router.push({ name: 'requestForm' });
 };
 
-const confirmDeleteRequest = async () => {
-  if (requestToDelete.value) {
-    try {
-      await deleteRequest(requestToDelete.value);
-      requests.value = requests.value.filter(request => request.id !== requestToDelete.value);
-      isSuccessModalActive.value = true;
-    } catch (error) {
-      console.error('Error deleting request:', error);
-    } finally {
-      isModalDangerActive.value = false;
-    }
-  }
-};
-
-const openDeleteModal = (requestId) => {
-  requestToDelete.value = requestId;
-  isModalDangerActive.value = true;
-};
-
-const goToPage = (pageNumber) => {
-  currentPage.value = pageNumber;
-};
-
-const toggleShowRejectedRequests = () => {
-  showRejectedRequests.value = !showRejectedRequests.value;
-  if (showRejectedRequests.value && rejectedRequests.value.length === 0) {
-    loadRejectedRequests();
-  }
-};
-
-const appealRequest = (requestId) => {
-  router.push({ name: 'requestForm', query: { appeal: true, id: requestId } });
-};
-
-onMounted(loadRequests);
+onMounted(async () => {
+  await fetchRequestsData();
+  await fetchCategoriesData();
+});
 </script>
 
 <template>
-  <div class="mt-2 mx-10 mb-10">
-    <CardBoxModal v-model="isModalDangerActive" title="Por favor confirme" button="danger" has-cancel @confirm="confirmDeleteRequest">
-      <p>¿Está seguro de que desea eliminar esta solicitud?</p>
-    </CardBoxModal>
 
-    <CardBoxModal v-model="isSuccessModalActive" title="Éxito" button="success">
-      <div class="flex items-center space-x-2">
-        <BaseIcon :path="mdiCheckCircle" class="text-green-500" />
-        <p>La solicitud se ha eliminado correctamente.</p>
-      </div>
-    </CardBoxModal>
+    <SectionMain>
+      <SectionTitleLineWithButton
+        :icon="mdiBookOutline"
+        title="Solicitudes de Libros"
+        main
+        @click="goToNewRequest"
+      />
+      <CardBox class="mb-6" has-table>
+        <div v-if="loading" class="flex items-center justify-center p-4">
+          <div
+            class="loader border-4 border-gray-200 border-t-4 border-t-blue-500 rounded-full w-8 h-8 animate-spin"
+          ></div>
+        </div>
+        <div v-if="error" class="text-red-500 p-4">{{ error }}</div>
+        <div v-else>
+          <div class="mb-4 flex flex-wrap gap-4">
+            <div class="relative">
+              <input
+                v-model="filters.search"
+                class="pl-10 px-4 py-2 border rounded"
+                placeholder="Buscar por título o autor"
+                @input="applyFilters"
+              />
+              <BaseIcon
+                :path="mdiMagnify"
+                class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              />
+            </div>
+            <div class="relative">
+              <select
+                v-model="filters.category"
+                class="appearance-none bg-transparent pr-8 pl-4 py-2 border rounded"
+                @change="applyFilters"
+              >
+                <option value="">Todas las categorías</option>
+                <option v-for="category in categories" :key="category.id" :value="category.id">
+                  {{ category.name }}
+                </option>
+              </select>
+            </div>
+            <div class="relative">
+              <select
+                v-model="filters.status"
+                class="appearance-none bg-transparent pr-8 pl-4 py-2 border rounded"
+                @change="applyFilters"
+              >
+                <option value="">Todos los estados</option>
+                <option value="pending">Pendiente</option>
+                <option value="archived">Archivado</option>
+                <option value="approved">Aprobada</option>
+                <option value="declined">Rechazada</option>
+              </select>
+            </div>
+          </div>
 
-    <div class="flex justify-between items-center mb-6">
-      <div class="relative w-full">
-        <FormControl v-model="searchQuery" placeholder="Buscar" transparent borderless class="pl-10 w-full" />
-        <svg class="absolute top-1/2 left-3 transform -translate-y-1/2 h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M9 2C4.58172 2 1 5.58172 1 10C1 14.4183 4.58172 18 9 18C11.0861 18 13.0004 17.2078 14.4266 15.9131L19.7071 21.1924C19.9871 21.4724 20.4871 21.4724 20.7671 21.1924C21.0471 20.9124 21.0471 20.4124 20.7671 20.1324L15.4866 14.853C16.7914 13.4313 17.5 11.5456 17.5 10C17.5 5.58172 14.4183 2 9 2ZM9 4C12.3137 4 15 6.68629 15 10C15 13.3137 12.3137 16 9 16C5.68629 16 3 13.3137 3 10C3 6.68629 5.68629 4 9 4Z"/>
-        </svg>
-      </div>
-    </div>
-    <div class="flex justify-between items-center mb-6">
-      <div>
-        <label class="mr-2">Categoría:</label>
-        <select v-model="selectedCategory" class="border rounded p-2 pr-10 bg-transparent">
-          <option value="all">Todas</option>
-          <!-- Agregar opciones para filtrar por categoría si es necesario -->
-        </select>
-      </div>
-      <div class="flex items-center space-x-4">
-        <button @click="toggleShowRejectedRequests" class="bg-blue-500 text-white p-2 rounded">
-          {{ showRejectedRequests ? 'Mostrar Solicitudes Normales' : 'Mostrar Solicitudes Rechazadas' }}
-        </button>
-        <button @click="goToNewRequest" class="bg-blue-500 text-white p-2 rounded">Nueva Solicitud</button>
-      </div>
-    </div>
-    <div class="relative">
-      <div v-if="loading" class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10">
-        <LoadingIndicator />
-      </div>
-      <div v-else>
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          <CardBox v-for="request in paginatedRequests" :key="request.id" class="flex flex-col items-center h-full border rounded-lg p-4">
-            <img :src="request.coverUrl" alt="Book cover" class="h-48 w-32 object-cover mb-4">
-            <h2 class="text-lg font-semibold mb-2 text-center truncate w-full">{{ request.title }}</h2>
-            <p class="text-blue-500 mb-2">$ {{ request.regularPrice }}</p>
-            <div class="text-gray-500 mb-2">
-              <strong>Categoría:</strong> {{ request.categoryName }}
+          <table class="table-auto w-full">
+            <thead>
+              <tr>
+                <th class="px-4 py-2 cursor-pointer" @click="sortTable('title')">Título</th>
+                <th class="px-4 py-2 cursor-pointer" @click="sortTable('author')">Autor</th>
+                <th class="px-4 py-2 cursor-pointer" @click="sortTable('categoryName')">Categoría</th>
+                <th class="px-4 py-2 cursor-pointer" @click="sortTable('status')">Estado</th>
+                <th class="px-4 py-2 cursor-pointer" @click="sortTable('createdAt')">Fecha</th>
+                <th class="px-4 py-2">Hora</th>
+                <th class="px-4 py-2">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="request in paginatedRequests" :key="request.id">
+                <td class="border px-4 py-2">{{ request.title }}</td>
+                <td class="border px-4 py-2">{{ request.author }}</td>
+                <td class="border px-4 py-2">
+                  {{ request.categoryName || "Cargando..." }}
+                </td>
+                <td class="border px-4 py-2">
+                  <span :class="statusClass(request.status)">{{
+                    translateStatus(request.status)
+                  }}</span>
+                </td>
+                <td class="border px-4 py-2">
+                  {{ new Date(request.createdAt.seconds * 1000).toLocaleDateString() }}
+                </td>
+                <td class="border px-4 py-2">
+                  {{ new Date(request.createdAt.seconds * 1000).toLocaleTimeString() }}
+                </td>
+                <td class="border px-4 py-2 flex justify-center space-x-2">
+                  <BaseButton
+                    color="info"
+                    :icon="mdiEye"
+                    small
+                    @click="() => viewRequest(request)"
+                  />
+                  <BaseButton
+                    :color="request.status === 'archived' ? 'success' : 'warning'"
+                    :icon="request.status === 'archived' ? mdiRestore : mdiArchiveOutline"
+                    small
+                    @click="() => toggleRequestStatus(request)"
+                    :disabled="loadingStates[request.id]"
+                  />
+                  <BaseButton
+                    v-if="request.status === 'pending'"
+                    color="danger"
+                    :icon="mdiTrashCan"
+                    small
+                    @click="() => confirmDeleteRequest(request.id)"
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Paginación -->
+          <div class="mt-4 flex justify-between items-center">
+            <span
+              >Mostrando {{ paginatedRequests.length }} de
+              {{ filteredRequests.length }} solicitudes</span
+            >
+            <div class="space-x-2">
+              <BaseButton
+                :disabled="currentPage === 1"
+                @click="currentPage--"
+                :icon="mdiChevronLeft"
+                small
+              />
+              <span>Página {{ currentPage }} de {{ totalPages }}</span>
+              <BaseButton
+                :disabled="currentPage === totalPages"
+                @click="currentPage++"
+                :icon="mdiChevronRight"
+                small
+              />
             </div>
-            <div class="text-gray-500 mb-2">
-              <strong>Autor:</strong> {{ request.authorName }}
-            </div>
-            <div class="text-gray-500 mb-4">
-              <strong>Idioma:</strong> {{ request.languageName }}
-            </div>
-            <div class="text-gray-500 mb-4">
-              <strong>Editorial:</strong> {{ request.publisherName }}
-            </div>
-            <div class="mt-auto flex justify-between w-full">
-              <!-- <button @click="() => router.push({ name: 'requestForm', params: { id: request.id } })" class="bg-gray-300 text-black py-2 px-4 rounded w-full mr-2">Editar</button>--> 
-              <button @click="openDeleteModal(request.id)" class="bg-red-500 text-white py-2 px-4 rounded w-full">
-                <BaseIcon :path="mdiTrashCan" />
-              </button>
-              <button v-if="showRejectedRequests" @click="appealRequest(request.id)" class="bg-yellow-500 text-white py-2 px-4 rounded w-full ml-2">
-                Apelar
-              </button>
-            </div>
-          </CardBox>
+          </div>
         </div>
-        <div class="mt-4 flex justify-center space-x-2">
-          <button
-            v-for="page in totalPages"
-            :key="page"
-            @click="goToPage(page)"
-            :class="{'bg-blue-500 text-white': page === currentPage, 'bg-gray-300 text-black': page !== currentPage}"
-            class="px-4 py-2 rounded"
-          >
-            {{ page }}
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
+      </CardBox>
+    </SectionMain>
+
 </template>
+

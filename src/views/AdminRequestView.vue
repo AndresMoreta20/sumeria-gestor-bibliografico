@@ -57,11 +57,11 @@
           <table class="table-auto w-full">
             <thead>
               <tr>
-                <th class="px-4 py-2">Título</th>
-                <th class="px-4 py-2">Autor</th>
-                <th class="px-4 py-2">Categoría</th>
-                <th class="px-4 py-2">Estado</th>
-                <th class="px-4 py-2">Fecha</th>
+                <th class="px-4 py-2 cursor-pointer" @click="sortTable('title')">Título</th>
+                <th class="px-4 py-2 cursor-pointer" @click="sortTable('author')">Autor</th>
+                <th class="px-4 py-2 cursor-pointer" @click="sortTable('categoryName')">Categoría</th>
+                <th class="px-4 py-2 cursor-pointer" @click="sortTable('status')">Estado</th>
+                <th class="px-4 py-2 cursor-pointer" @click="sortTable('createdAt')">Fecha</th>
                 <th class="px-4 py-2">Hora</th>
                 <th class="px-4 py-2">Acciones</th>
               </tr>
@@ -176,6 +176,9 @@ const filters = ref({
 
 const currentPage = ref(1);
 const itemsPerPage = 10;
+const sortKey = ref('');
+const sortOrder = ref(1);
+
 const fetchRequestsData = async () => {
   loading.value = true;
   error.value = null;
@@ -188,8 +191,8 @@ const fetchRequestsData = async () => {
 
     const processedRequests = [
       ...pendingRequests.map(req => ({ ...req, status: "pending" })),
-      ...approvedRequests.map(req => ({ id: req.id, ...req, status: "approved" })),  // Ensuring correct ID is used
-      ...declinedRequests.map(req => ({ id: req.id, ...req, status: "declined" }))  // Ensuring correct ID is used
+      ...approvedRequests.map(req => ({ ...req, status: "approved" })),
+      ...declinedRequests.map(req => ({ ...req, status: "declined" }))
     ];
 
     requests.value = await Promise.all(
@@ -262,8 +265,26 @@ const applyFilters = () => {
   currentPage.value = 1;
 };
 
+const sortTable = (key) => {
+  if (sortKey.value === key) {
+    sortOrder.value *= -1;
+  } else {
+    sortKey.value = key;
+    sortOrder.value = 1;
+  }
+};
+
 const filteredRequests = computed(() => {
-  return requests.value.filter((request) => {
+  const sortedRequests = [...requests.value].sort((a, b) => {
+    const aValue = a[sortKey.value];
+    const bValue = b[sortKey.value];
+    
+    if (aValue > bValue) return sortOrder.value;
+    if (aValue < bValue) return -sortOrder.value;
+    return 0;
+  });
+
+  return sortedRequests.filter((request) => {
     const searchMatch =
       filters.value.search.toLowerCase() === "" ||
       request.title

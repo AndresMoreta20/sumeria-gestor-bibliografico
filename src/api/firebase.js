@@ -121,22 +121,27 @@ export const deleteRequest = async (requestId) => {
 // src/api/firebase.js
 
 // Approve a request and move it to the approvedBooks collection
-export const approveRequest = async (request) => {
+export const approveRequest = async (requestId) => {
   try {
-    const docRef = doc(db, "bookRequests", request.id);
-    const docSnapshot = await getDoc(docRef);
-    if (!docSnapshot.exists()) {
+    const requestDoc = await getDoc(doc(db, "bookRequests", requestId));
+    if (!requestDoc.exists()) {
       throw new Error("Request not found");
     }
 
-    const requestData = {
-      ...docSnapshot.data(),
-      idOriginalRequest: request.id,
-    }; // Preservar el ID original y eliminar el campo id
-    delete requestData.id;
+    const requestData = requestDoc.data();
 
-    await addDoc(collection(db, "approvedBooks"), requestData); // Insertar sin el campo id duplicado
-    await deleteRequest(request.id);
+    // Preparar el documento aprobado, eliminando el campo `id`
+    const approvedRequest = {
+      ...requestData,
+      approvedAt: new Date(), // Puedes agregar un campo de tiempo si es necesario
+    };
+    delete approvedRequest.id;
+
+    // Agregar el documento a la colección `approvedBooks`
+    await addDoc(collection(db, "approvedBooks"), approvedRequest);
+
+    // Eliminar el documento de la colección `bookRequests`
+    await deleteDoc(doc(db, "bookRequests", requestId));
   } catch (error) {
     console.error("Error approving request:", error);
     throw error;

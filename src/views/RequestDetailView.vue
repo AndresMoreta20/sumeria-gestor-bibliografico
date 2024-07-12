@@ -23,7 +23,7 @@
             @reject="handleReject(key)"
             :approved="fieldStatus[key] === 'approved'"
             :rejected="fieldStatus[key] === 'rejected'"
-            :disabled="fieldStatus[key] !== 'pending'"
+            :disabled="isDisabled"
           />
 
           <div v-if="form.coverUrl" class="mt-4">
@@ -40,7 +40,7 @@
 
           <div class="flex justify-end space-x-2">
             <BaseButton
-              v-if="allFieldsApproved"
+              v-if="allFieldsApproved && !isDisabled"
               color="success"
               :icon="mdiCheckCircle"
               @click="approveRequest"
@@ -48,7 +48,7 @@
               label="Aprobar y subir a WooCommerce"
             />
             <BaseButton
-              v-if="anyFieldRejected"
+              v-if="anyFieldRejected && !isDisabled"
               color="danger"
               :icon="mdiCloseCircle"
               @click="rejectRequest"
@@ -82,6 +82,7 @@ const requestId = route.params.id;
 
 const form = reactive({});
 const fieldStatus = reactive({});
+const requestStatus = ref('pending');
 
 const loading = ref(false);
 const submitError = ref(null);
@@ -114,6 +115,10 @@ const allFieldsApproved = computed(() => {
 
 const anyFieldRejected = computed(() => {
   return Object.values(fieldStatus).some(status => status === 'rejected');
+});
+
+const isDisabled = computed(() => {
+  return requestStatus.value !== 'pending';
 });
 
 const fetchFieldById = async (field, id) => {
@@ -150,6 +155,7 @@ onMounted(async () => {
   try {
     const data = await fetchRequestById(requestId);
     Object.assign(form, data);
+    requestStatus.value = data.status;
     Object.keys(fieldLabels).forEach(key => {
       fieldStatus[key] = data.fieldStatus?.[key] || 'pending';
     });
@@ -263,8 +269,7 @@ const approveRequest = async () => {
 
     console.log('Book uploaded successfully:', response);
 
-    await approveRequestFirebase(form); // Enviar form sin ID duplicado
-
+    await approveRequestFirebase(requestId); // Enviar el requestId
     router.push('/requestsAdmin');
   } catch (error) {
     console.error('Error approving request:', error);

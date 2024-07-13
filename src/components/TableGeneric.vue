@@ -9,7 +9,6 @@ import BaseLevel from '@/components/BaseLevel.vue'
 import BaseButtons from '@/components/BaseButtons.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import FormControl from '@/components/FormControl.vue'
-import { updateLanguage } from '@/api/woocommerce'
 
 const router = useRouter()
 
@@ -33,6 +32,10 @@ const props = defineProps({
   },
   newRoute: {
     type: String,
+    required: true
+  },
+  updateFunction: {
+    type: Function,
     required: true
   }
 })
@@ -92,25 +95,23 @@ const editItem = (item) => {
 }
 
 const saveEdit = async () => {
-  if (!selectedItem.value) return
+  if (!selectedItem.value) return;
 
-  isLoading.value = true
-  errorMessage.value = ''
+  isLoading.value = true;
+  errorMessage.value = '';
 
   try {
-    const updatedLanguage = await updateLanguage(selectedItem.value.id, { name: editedValue.value })
-    
-    Object.assign(selectedItem.value, updatedLanguage)
-    
-    isEditModalActive.value = false
-    emit('itemUpdated', updatedLanguage)
+    const updatedItem = await props.updateFunction(selectedItem.value.id, { name: editedValue.value });
+    Object.assign(selectedItem.value, updatedItem);
+    isEditModalActive.value = false;
+    emit('itemUpdated', updatedItem);
   } catch (error) {
-    console.error('Error updating language:', error)
-    errorMessage.value = 'Error al actualizar el lenguaje. Por favor, intente de nuevo.'
+    console.error('Error updating item:', error);
+    errorMessage.value = `Error al actualizar el elemento: ${error.response?.data?.message || error.message}`;
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
-}
+};
 
 const goToNew = () => {
   router.push({ name: props.newRoute })

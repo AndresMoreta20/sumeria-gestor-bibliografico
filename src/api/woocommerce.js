@@ -75,16 +75,16 @@ export const createCategory = async (name) => {
   }
 };
 
-export const updateCategory = async (categoryId, updatedData) => {
+export const updateCategory = async (id, updatedData) => {
   try {
     const response = await apiClient.put(
-      `/products/categories/${categoryId}`,
+      `/products/categories/${id}`,
       updatedData,
       getAuth()
     );
     return response.data;
   } catch (error) {
-    console.error(`Error updating category with ID (${categoryId}):`, error);
+    console.error(`Error updating category with ID (${id}):`, error);
     throw error;
   }
 };

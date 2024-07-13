@@ -37,19 +37,15 @@ const props = defineProps({
   },
   dataFetchFunction: {
     type: Function,
-    required: false
+    required: true
   },
-  dataTransform: {
+  updateFunction: {
     type: Function,
-    required: false
+    required: true
   },
   newRoute: {
     type: String,
     required: false
-  },
-  updateLanguage: { // Declarar la prop updateLanguage
-    type: Function,
-    required: true
   }
 })
 
@@ -62,25 +58,19 @@ const fetchData = async () => {
   error.value = null
 
   try {
-    if (props.dataFetchFunction) {
-      data.value = await props.dataFetchFunction()
-    } else if (props.endpoint) {
-      const response = await axios.get(props.endpoint, {
-        auth: {
-          username: import.meta.env.VITE_APP_CONSUMER_KEY,
-          password: import.meta.env.VITE_APP_CONSUMER_SECRET
-        }
-      })
-      data.value = response.data
-    }
-    if (props.dataTransform) {
-      data.value = props.dataTransform(data.value)
-    }
+    data.value = await props.dataFetchFunction()
   } catch (err) {
     console.error('Error fetching data:', err)
     error.value = 'Error fetching data. Please try again later.'
   } finally {
     loading.value = false
+  }
+}
+
+const handleItemUpdated = async (updatedItem) => {
+  const index = data.value.findIndex(item => item.id === updatedItem.id)
+  if (index !== -1) {
+    data.value[index] = updatedItem
   }
 }
 
@@ -91,7 +81,7 @@ onMounted(fetchData)
   <LayoutAuthenticated>
     <SectionMain>
       <SectionTitleLineWithButton :icon="icon" :title="title" main>
-        <!-- Optional button can go here -->
+        <!-- Optional button can go here if needed -->
       </SectionTitleLineWithButton>
 
       <CardBox class="mb-6" has-table>
@@ -99,16 +89,17 @@ onMounted(fetchData)
           <LoadingIndicator />
         </template>
         <template v-else-if="error">
-          <div class="text-red-500">{{ error }}</div> <!-- Mostrar mensaje de error -->
+          <div class="text-red-500">{{ error }}</div>
         </template>
         <template v-else>
-          <TableGeneric
-            :items="data"
-            :columns="columns"
-            :column-labels="columnLabels"
+          <TableGeneric 
+            :items="data" 
+            :columns="columns" 
+            :column-labels="columnLabels" 
             :checkable="checkable"
-            :newRoute="newRoute"
-            :updateLanguage="props.updateLanguage" 
+            :update-function="updateFunction"
+            :new-route="newRoute"
+            @item-updated="handleItemUpdated"
           />
         </template>
       </CardBox>

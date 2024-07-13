@@ -3,11 +3,11 @@
 import { ref, onMounted } from 'vue'
 import DataTableView from '@/components/DataTableView.vue'
 import { mdiTranslate } from '@mdi/js'
-import { fetchLanguages } from '@/api/woocommerce'
+import { fetchLanguages, updateLanguage } from '@/api/woocommerce'
 
 const title = 'Languages'
-const columns = ['id', 'name']
-const columnLabels = { id: 'ID', name: 'Nombre' }
+const columns = ['id', 'name', 'actions'] // Añadir columna de acciones
+const columnLabels = { id: 'ID', name: 'Nombre', actions: 'Acciones' } // Etiqueta para la columna de acciones
 const icon = mdiTranslate
 const checkable = false
 
@@ -29,6 +29,16 @@ const dataFetchFunction = async () => {
     throw error
   }
 }
+
+const handleUpdateLanguage = async (id, updatedData) => {
+  try {
+    const response = await updateLanguage(id, updatedData)
+    return response
+  } catch (error) {
+    console.error('Error updating language:', error)
+    throw error
+  }
+}
 </script>
 
 <template>
@@ -39,6 +49,7 @@ const dataFetchFunction = async () => {
     :icon="icon"
     :checkable="checkable"
     :dataFetchFunction="dataFetchFunction"
-    new-route="languageForm"
+    :newRoute="'languageForm'"
+    :updateLanguage="handleUpdateLanguage"
   />
 </template>

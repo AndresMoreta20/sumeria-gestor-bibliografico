@@ -42,6 +42,14 @@ const props = defineProps({
   dataTransform: {
     type: Function,
     required: false
+  },
+  newRoute: {
+    type: String,
+    required: false
+  },
+  updateLanguage: { // Declarar la prop updateLanguage
+    type: Function,
+    required: true
   }
 })
 
@@ -94,7 +102,14 @@ onMounted(fetchData)
           <div class="text-red-500">{{ error }}</div> <!-- Mostrar mensaje de error -->
         </template>
         <template v-else>
-          <TableGeneric :items="data" :columns="columns" :column-labels="columnLabels" :checkable="checkable" />
+          <TableGeneric
+            :items="data"
+            :columns="columns"
+            :column-labels="columnLabels"
+            :checkable="checkable"
+            :newRoute="newRoute"
+            :updateLanguage="props.updateLanguage" 
+          />
         </template>
       </CardBox>
     </SectionMain>

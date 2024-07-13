@@ -1,3 +1,4 @@
+<!-- CardBoxModal.vue -->
 <script setup>
 import { computed } from 'vue'
 import { mdiClose } from '@mdi/js'

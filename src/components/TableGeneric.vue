@@ -1,17 +1,17 @@
 <!-- TableGeneric.vue -->
 <script setup>
 import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router' // Importar el router
-import { mdiEye, mdiMagnify, mdiPlus } from '@mdi/js'
+import { useRouter } from 'vue-router'
+import { mdiEye, mdiMagnify, mdiPlus, mdiPencil } from '@mdi/js'
 import CardBoxModal from '@/components/CardBoxModal.vue'
 import TableCheckboxCell from '@/components/TableCheckboxCell.vue'
 import BaseLevel from '@/components/BaseLevel.vue'
 import BaseButtons from '@/components/BaseButtons.vue'
 import BaseButton from '@/components/BaseButton.vue'
-import UserAvatar from '@/components/UserAvatar.vue'
 import FormControl from '@/components/FormControl.vue'
+import { updateLanguage } from '@/api/woocommerce'
 
-const router = useRouter() // Usar el router
+const router = useRouter()
 
 const props = defineProps({
   items: {
@@ -33,16 +33,22 @@ const props = defineProps({
   },
   newRoute: {
     type: String,
-    required: true // Añadir la prop para la ruta de creación
+    required: true
   }
 })
 
+const emit = defineEmits(['itemUpdated'])
+
 const isModalActive = ref(false)
+const isEditModalActive = ref(false)
 const selectedItem = ref(null)
+const editedValue = ref('')
 const searchQuery = ref('')
 const perPage = ref(8)
 const currentPage = ref(0)
 const checkedRows = ref([])
+const isLoading = ref(false)
+const errorMessage = ref('')
 
 const filteredItems = computed(() => {
   return props.items.filter(item =>
@@ -65,21 +71,11 @@ const pagesList = computed(() => {
   return pagesList
 })
 
-const remove = (arr, cb) => {
-  const newArr = []
-  arr.forEach((item) => {
-    if (!cb(item)) {
-      newArr.push(item)
-    }
-  })
-  return newArr
-}
-
 const checked = (isChecked, item) => {
   if (isChecked) {
     checkedRows.value.push(item)
   } else {
-    checkedRows.value = remove(checkedRows.value, (row) => row.id === item.id)
+    checkedRows.value = checkedRows.value.filter((row) => row.id !== item.id)
   }
 }
 
@@ -88,16 +84,78 @@ const viewItem = (item) => {
   isModalActive.value = true
 }
 
+const editItem = (item) => {
+  selectedItem.value = item
+  editedValue.value = item.name
+  isEditModalActive.value = true
+  errorMessage.value = ''
+}
+
+const saveEdit = async () => {
+  if (!selectedItem.value) return
+
+  isLoading.value = true
+  errorMessage.value = ''
+
+  try {
+    const updatedLanguage = await updateLanguage(selectedItem.value.id, { name: editedValue.value })
+    
+    Object.assign(selectedItem.value, updatedLanguage)
+    
+    isEditModalActive.value = false
+    emit('itemUpdated', updatedLanguage)
+  } catch (error) {
+    console.error('Error updating language:', error)
+    errorMessage.value = 'Error al actualizar el lenguaje. Por favor, intente de nuevo.'
+  } finally {
+    isLoading.value = false
+  }
+}
+
 const goToNew = () => {
-  router.push({ name: props.newRoute }) // Redirigir a la ruta nueva
+  router.push({ name: props.newRoute })
+}
+
+const closeViewModal = () => {
+  isModalActive.value = false
+}
+
+const closeEditModal = () => {
+  isEditModalActive.value = false
 }
 </script>
 
 <template>
-  <CardBoxModal v-model="isModalActive" title="Detalles del elemento">
+  <CardBoxModal
+    v-model="isModalActive"
+    title="Detalles del elemento"
+    button="info"
+    has-cancel
+    @confirm="closeViewModal"
+    @cancel="closeViewModal"
+  >
     <div v-if="selectedItem">
-      <p>ID: {{ selectedItem.id }}</p>
-      <p>Nombre: {{ selectedItem.name }}</p>
+      <p v-for="column in columns" :key="column">
+        {{ columnLabels[column] || column }}: {{ selectedItem[column] }}
+      </p>
+    </div>
+  </CardBoxModal>
+
+  <CardBoxModal
+    v-model="isEditModalActive"
+    title="Editar elemento"
+    button="info"
+    has-cancel
+    @confirm="saveEdit"
+    @cancel="closeEditModal"
+  >
+    <div v-if="selectedItem">
+      <FormControl
+        v-model="editedValue"
+        label="Nombre"
+        placeholder="Editar nombre"
+      />
+      <p v-if="errorMessage" class="text-red-500 mt-2">{{ errorMessage }}</p>
     </div>
   </CardBoxModal>
 
@@ -108,7 +166,7 @@ const goToNew = () => {
         <path :d="mdiMagnify" />
       </svg>
     </div>
-   <!-- <BaseButton color="primary" :icon="mdiPlus" @click="goToNew">Nuevo</BaseButton>  Botón Nuevo -->
+    <BaseButton color="primary" :icon="mdiPlus" @click="goToNew">Nuevo</BaseButton>
   </div>
 
   <table>
@@ -116,7 +174,7 @@ const goToNew = () => {
       <tr>
         <th v-if="checkable" />
         <th v-for="column in columns" :key="column">{{ columnLabels[column] || column }}</th>
-        <th />
+        <th>Acciones</th>
       </tr>
     </thead>
     <tbody>
@@ -126,6 +184,7 @@ const goToNew = () => {
         <td class="before:hidden lg:w-1 whitespace-nowrap">
           <BaseButtons type="justify-start lg:justify-end" no-wrap>
             <BaseButton color="info" :icon="mdiEye" small @click="viewItem(item)" />
+            <BaseButton color="warning" :icon="mdiPencil" small @click="editItem(item)" />
           </BaseButtons>
         </td>
       </tr>

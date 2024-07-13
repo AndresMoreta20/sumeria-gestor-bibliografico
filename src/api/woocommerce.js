@@ -33,6 +33,7 @@ const fetchAllPages = async (endpoint, params = {}) => {
   return allData;
 };
 
+// Functions for categories
 export const fetchCategories = async () => {
   try {
     const data = await fetchAllPages("/products/categories");
@@ -65,9 +66,7 @@ export const createCategory = async (name) => {
     const response = await apiClient.post(
       "/products/categories",
       { name },
-      {
-        auth: getAuth().auth,
-      }
+      getAuth()
     );
     return response.data;
   } catch (error) {
@@ -76,19 +75,21 @@ export const createCategory = async (name) => {
   }
 };
 
-export const fetchCategoryByName = async (name) => {
+export const updateCategory = async (categoryId, updatedData) => {
   try {
-    const response = await apiClient.get("/products/categories", {
-      params: { search: name },
-      auth: getAuth().auth,
-    });
-    return response.data.length > 0 ? response.data[0] : null;
+    const response = await apiClient.put(
+      `/products/categories/${categoryId}`,
+      updatedData,
+      getAuth()
+    );
+    return response.data;
   } catch (error) {
-    console.error("Error fetching category by name:", error);
+    console.error(`Error updating category with ID (${categoryId}):`, error);
     throw error;
   }
 };
 
+// Functions for publishers
 export const fetchPublishers = async () => {
   try {
     const data = await fetchAllPages("/products/attributes/4/terms");
@@ -116,31 +117,13 @@ export const fetchPublisherById = async (id) => {
   }
 };
 
+// Functions for books
 export const fetchBooks = async () => {
   try {
     const data = await fetchAllPages("/products");
     return data;
   } catch (error) {
     console.error("Error fetching books:", error);
-    throw error;
-  }
-};
-
-export const fetchCustomersData = async () => {
-  try {
-    const data = await fetchAllPages("/customers");
-    return data;
-  } catch (error) {
-    console.error("Error fetching customers data:", error);
-    throw error;
-  }
-};
-
-export const toggleBookStatus = async (bookId, status) => {
-  try {
-    await apiClient.put(`/products/${bookId}`, { status }, getAuth());
-  } catch (error) {
-    console.error(`Error toggling book status for book ID (${bookId}):`, error);
     throw error;
   }
 };
@@ -158,94 +141,21 @@ export const fetchBookDetails = async (bookId) => {
   }
 };
 
-export const fetchSalesData = async () => {
+export const toggleBookStatus = async (bookId, status) => {
   try {
-    const response = await apiClient.get(
-      "/reports/sales?period=week",
-      getAuth()
-    );
-    return response.data;
+    await apiClient.put(`/products/${bookId}`, { status }, getAuth());
   } catch (error) {
-    console.error("Error fetching sales data:", error);
-    throw error;
-  }
-};
-
-export const fetchAuthors = async () => {
-  try {
-    const data = await fetchAllPages("/products/attributes/1/terms");
-    return { data };
-  } catch (error) {
-    console.error("Error fetching authors:", error);
-    throw error;
-  }
-};
-
-export const fetchAuthorById = async (id) => {
-  if (isNaN(id)) {
-    console.log(`ID no es un número: ${id}`);
-    return { name: id };
-  }
-  try {
-    const response = await apiClient.get(
-      `/products/attributes/1/terms/${id}`,
-      getAuth()
-    );
-    return response.data;
-  } catch (error) {
-    console.error(`Error fetching author by ID (${id}):`, error);
-    throw error;
-  }
-};
-
-export const fetchLanguages = async () => {
-  try {
-    const data = await fetchAllPages("/products/attributes/7/terms");
-    return { data };
-  } catch (error) {
-    console.error("Error fetching languages:", error);
-    throw error;
-  }
-};
-
-export const fetchLanguageById = async (id) => {
-  if (isNaN(id)) {
-    console.log(`ID no es un número: ${id}`);
-    return { name: id };
-  }
-  try {
-    const response = await apiClient.get(
-      `/products/attributes/7/terms/${id}`,
-      getAuth()
-    );
-    return response.data;
-  } catch (error) {
-    console.error(`Error fetching language by ID (${id}):`, error);
+    console.error(`Error toggling book status for book ID (${bookId}):`, error);
     throw error;
   }
 };
 
 export const uploadProduct = async (data) => {
   try {
-    const response = await apiClient.post("/products", data, {
-      auth: getAuth().auth,
-    });
+    const response = await apiClient.post("/products", data, getAuth());
     return response.data;
   } catch (error) {
     console.error("Error uploading product to WooCommerce:", error);
-    throw error;
-  }
-};
-
-export const checkSkuExists = async (sku) => {
-  try {
-    const response = await apiClient.get("/products", {
-      ...getAuth(),
-      params: { sku },
-    });
-    return response.data.length > 0;
-  } catch (error) {
-    console.error("Error checking SKU:", error);
     throw error;
   }
 };
@@ -284,6 +194,141 @@ export const restoreProduct = async (productId) => {
     return response.data;
   } catch (error) {
     console.error(`Error restoring product with ID (${productId}):`, error);
+    throw error;
+  }
+};
+
+// Functions for customers
+export const fetchCustomersData = async () => {
+  try {
+    const data = await fetchAllPages("/customers");
+    return data;
+  } catch (error) {
+    console.error("Error fetching customers data:", error);
+    throw error;
+  }
+};
+
+// Functions for authors
+export const fetchAuthors = async () => {
+  try {
+    const data = await fetchAllPages("/products/attributes/1/terms");
+    return { data };
+  } catch (error) {
+    console.error("Error fetching authors:", error);
+    throw error;
+  }
+};
+
+export const fetchAuthorById = async (id) => {
+  if (isNaN(id)) {
+    console.log(`ID no es un número: ${id}`);
+    return { name: id };
+  }
+  try {
+    const response = await apiClient.get(
+      `/products/attributes/1/terms/${id}`,
+      getAuth()
+    );
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching author by ID (${id}):`, error);
+    throw error;
+  }
+};
+
+export const updateAuthor = async (authorId, updatedData) => {
+  try {
+    const response = await apiClient.put(
+      `/products/attributes/1/terms/${authorId}`,
+      updatedData,
+      getAuth()
+    );
+    return response.data;
+  } catch (error) {
+    console.error(`Error updating author with ID (${authorId}):`, error);
+    throw error;
+  }
+};
+
+// Functions for languages
+export const fetchLanguages = async () => {
+  try {
+    const data = await fetchAllPages("/products/attributes/7/terms");
+    return { data };
+  } catch (error) {
+    console.error("Error fetching languages:", error);
+    throw error;
+  }
+};
+
+export const fetchLanguageById = async (id) => {
+  if (isNaN(id)) {
+    console.log(`ID no es un número: ${id}`);
+    return { name: id };
+  }
+  try {
+    const response = await apiClient.get(
+      `/products/attributes/7/terms/${id}`,
+      getAuth()
+    );
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching language by ID (${id}):`, error);
+    throw error;
+  }
+};
+
+export const updateLanguage = async (languageId, updatedData) => {
+  try {
+    const response = await apiClient.put(
+      `/products/attributes/7/terms/${languageId}`,
+      updatedData,
+      getAuth()
+    );
+    return response.data;
+  } catch (error) {
+    console.error(`Error updating language with ID (${languageId}):`, error);
+    throw error;
+  }
+};
+
+// Other utility functions
+export const fetchSalesData = async () => {
+  try {
+    const response = await apiClient.get(
+      "/reports/sales?period=week",
+      getAuth()
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching sales data:", error);
+    throw error;
+  }
+};
+
+export const checkSkuExists = async (sku) => {
+  try {
+    const response = await apiClient.get("/products", {
+      ...getAuth(),
+      params: { sku },
+    });
+    return response.data.length > 0;
+  } catch (error) {
+    console.error("Error checking SKU:", error);
+    throw error;
+  }
+};
+
+export const fetchCategoryByName = async (name) => {
+  try {
+    const response = await apiClient.get("/products/categories", {
+      params: { search: name },
+      ...getAuth(),
+    });
+    return response.data.length > 0 ? response.data[0] : null;
+  } catch (error) {
+    console.error("Error fetching category by name:", error);
     throw error;
   }
 };

@@ -128,6 +128,13 @@ const routeDefinitions = [
     title: "Nuevo Lenguaje",
   },
   {
+    path: "/category/new",
+    name: "categoryForm",
+    componentPath: "CategoryForm",
+    requiresAuth: true,
+    title: "Nueva Categoría",
+  },
+  {
     path: "/publisherForm",
     name: "publisherForm",
     componentPath: "PublisherForm",

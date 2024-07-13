@@ -319,3 +319,5 @@ export const fetchDeclinedRequests = async () => {
     throw error;
   }
 };
+
+// woocommerce.js

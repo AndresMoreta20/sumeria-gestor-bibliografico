@@ -61,16 +61,19 @@ export const fetchCategoryById = async (id) => {
   }
 };
 
+// En woocommerce.js
 export const createCategory = async (name) => {
+  console.log("createCategory called with name:", name);
   try {
     const response = await apiClient.post(
       "/products/categories",
       { name },
       getAuth()
     );
+    console.log("API response:", response.data);
     return response.data;
   } catch (error) {
-    console.error("Error creating category:", error);
+    console.error("Error in createCategory:", error);
     throw error;
   }
 };
@@ -329,6 +332,48 @@ export const fetchCategoryByName = async (name) => {
     return response.data.length > 0 ? response.data[0] : null;
   } catch (error) {
     console.error("Error fetching category by name:", error);
+    throw error;
+  }
+};
+
+export const createAuthor = async (name) => {
+  try {
+    const response = await apiClient.post(
+      "/products/attributes/1/terms",
+      { name },
+      getAuth()
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error creating author:", error);
+    throw error;
+  }
+};
+
+// export const createCategory = async (name) => {
+//   try {
+//     const response = await apiClient.post(
+//       "/products/categories",
+//       { name },
+//       getAuth()
+//     );
+//     return response.data;
+//   } catch (error) {
+//     console.error("Error creating category:", error);
+//     throw error;
+//   }
+// };
+
+export const createLanguage = async (name) => {
+  try {
+    const response = await apiClient.post(
+      "/products/attributes/7/terms",
+      { name },
+      getAuth()
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error creating language:", error);
     throw error;
   }
 };

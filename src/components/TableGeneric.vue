@@ -34,9 +34,13 @@ const props = defineProps({
     type: String,
     required: true
   },
+  hideEditButton: {
+    type: Boolean,
+    default: false
+  },
   updateFunction: {
     type: Function,
-    required: true
+    required: false
   }
 })
 
@@ -95,23 +99,23 @@ const editItem = (item) => {
 }
 
 const saveEdit = async () => {
-  if (!selectedItem.value) return;
+  if (!selectedItem.value || !props.updateFunction) return
 
-  isLoading.value = true;
-  errorMessage.value = '';
+  isLoading.value = true
+  errorMessage.value = ''
 
   try {
-    const updatedItem = await props.updateFunction(selectedItem.value.id, { name: editedValue.value });
-    Object.assign(selectedItem.value, updatedItem);
-    isEditModalActive.value = false;
-    emit('itemUpdated', updatedItem);
+    const updatedItem = await props.updateFunction(selectedItem.value.id, { name: editedValue.value })
+    Object.assign(selectedItem.value, updatedItem)
+    isEditModalActive.value = false
+    emit('itemUpdated', updatedItem)
   } catch (error) {
-    console.error('Error updating item:', error);
-    errorMessage.value = `Error al actualizar el elemento: ${error.response?.data?.message || error.message}`;
+    console.error('Error updating item:', error)
+    errorMessage.value = `Error al actualizar: ${error.response?.data?.message || error.message}`
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
-};
+}
 
 const goToNew = () => {
   router.push({ name: props.newRoute })
@@ -185,7 +189,13 @@ const closeEditModal = () => {
         <td class="before:hidden lg:w-1 whitespace-nowrap">
           <BaseButtons type="justify-start lg:justify-end" no-wrap>
             <BaseButton color="info" :icon="mdiEye" small @click="viewItem(item)" />
-            <BaseButton color="warning" :icon="mdiPencil" small @click="editItem(item)" />
+            <BaseButton 
+              v-if="!hideEditButton" 
+              color="warning" 
+              :icon="mdiPencil" 
+              small 
+              @click="editItem(item)"
+            />
           </BaseButtons>
         </td>
       </tr>
@@ -204,7 +214,7 @@ const closeEditModal = () => {
           @click="currentPage = page"
         />
       </BaseButtons>
-      <small>Page {{ currentPageHuman }} of {{ numPages }}</small>
+      <small>Página {{ currentPageHuman }} de {{ numPages }}</small>
     </BaseLevel>
   </div>
 </template>

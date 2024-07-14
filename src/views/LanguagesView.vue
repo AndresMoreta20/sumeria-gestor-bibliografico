@@ -30,10 +30,10 @@ const dataFetchFunction = async () => {
   }
 }
 
-const handleUpdateLanguage = async (id, updatedData) => {
+const updateFunction = async (id, data) => {
   try {
-    const response = await updateLanguage(id, updatedData)
-    return response
+    const updatedLanguage = await updateLanguage(id, data)
+    return updatedLanguage
   } catch (error) {
     console.error('Error updating language:', error)
     throw error
@@ -49,7 +49,7 @@ const handleUpdateLanguage = async (id, updatedData) => {
     :icon="icon"
     :checkable="checkable"
     :dataFetchFunction="dataFetchFunction"
-    :newRoute="'languageForm'"
-    :updateLanguage="handleUpdateLanguage"
+    :updateFunction="updateFunction"
+    new-route="languageForm"
   />
 </template>

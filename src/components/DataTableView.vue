@@ -46,6 +46,10 @@ const props = defineProps({
   newRoute: {
     type: String,
     required: false
+  },
+  hideEditButton: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -99,6 +103,7 @@ onMounted(fetchData)
             :checkable="checkable"
             :update-function="updateFunction"
             :new-route="newRoute"
+            :hideEditButton="hideEditButton"
             @item-updated="handleItemUpdated"
           />
         </template>

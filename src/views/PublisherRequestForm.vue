@@ -20,14 +20,17 @@
         </FormField>
 
         <FormField label="Provincia" help="Provincia">
-          <select v-model="form.departamento" name="departamento" required class="form-select w-full">
+          <select v-model="form.departamento" name="departamento" required class="form-select w-full" @change="updateCiudades">
             <option value="" disabled selected>Seleccione una provincia</option>
             <option v-for="provincia in provincias" :key="provincia" :value="provincia">{{ provincia }}</option>
           </select>
         </FormField>
 
         <FormField label="Ciudad" help="Ciudad">
-          <input v-model="form.ciudad" name="ciudad" required class="form-input w-full" />
+          <select v-model="form.ciudad" name="ciudad" required class="form-select w-full" :disabled="!form.departamento">
+            <option value="" disabled selected>Seleccione una ciudad</option>
+            <option v-for="ciudad in ciudadesDisponibles" :key="ciudad" :value="ciudad">{{ ciudad }}</option>
+          </select>
         </FormField>
 
         <FormField label="Dirección" help="Dirección">
@@ -61,7 +64,7 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue';
+import { reactive, ref, computed } from 'vue';
 import { collection, addDoc, getFirestore } from 'firebase/firestore';
 import SectionMain from '@/components/SectionMain.vue';
 import CardBox from '@/components/CardBox.vue';
@@ -91,12 +94,43 @@ const form = reactive({
 const loading = ref(false);
 const errorMessage = ref('');
 const successMessage = ref('');
-const provincias = [
-  'Azuay', 'Bolívar', 'Cañar', 'Carchi', 'Chimborazo', 'Cotopaxi', 'El Oro',
-  'Esmeraldas', 'Galápagos', 'Guayas', 'Imbabura', 'Loja', 'Los Ríos', 'Manabí',
-  'Morona Santiago', 'Napo', 'Orellana', 'Pastaza', 'Pichincha', 'Santa Elena',
-  'Santo Domingo de los Tsáchilas', 'Sucumbíos', 'Tungurahua', 'Zamora Chinchipe'
-];
+
+const provinciasYCiudades = {
+  'Azuay': ['Cuenca', 'Gualaceo', 'Paute', 'Sígsig', 'Santa Isabel', 'Chordeleg', 'Girón', 'Nabón', 'Pucará', 'San Fernando', 'Oña', 'Guachapala', 'El Pan', 'Sevilla de Oro'],
+  'Bolívar': ['Guaranda', 'San Miguel', 'Chillanes', 'Chimbo', 'Echeandía', 'Caluma', 'Las Naves'],
+  'Cañar': ['Azogues', 'Biblián', 'La Troncal', 'Cañar', 'El Tambo', 'Déleg', 'Suscal'],
+  'Carchi': ['Tulcán', 'San Gabriel', 'Huaca', 'Espejo', 'Mira', 'Bolívar'],
+  'Chimborazo': ['Riobamba', 'Alausí', 'Guano', 'Colta', 'Chunchi', 'Chambo', 'Pallatanga', 'Guamote', 'Cumandá', 'Penipe'],
+  'Cotopaxi': ['Latacunga', 'La Maná', 'Salcedo', 'Pujilí', 'Saquisilí', 'Pangua', 'Sigchos'],
+  'El Oro': ['Machala', 'Santa Rosa', 'Pasaje', 'Huaquillas', 'El Guabo', 'Arenillas', 'Piñas', 'Zaruma', 'Portovelo', 'Balsas', 'Marcabelí', 'Paccha', 'Chilla', 'Atahualpa'],
+  'Esmeraldas': ['Esmeraldas', 'Quinindé', 'Atacames', 'Muisne', 'Río Verde', 'Eloy Alfaro', 'San Lorenzo'],
+  'Galápagos': ['Puerto Baquerizo Moreno', 'Puerto Ayora', 'Puerto Villamil'],
+  'Guayas': ['Guayaquil', 'Durán', 'Milagro', 'Daule', 'El Empalme', 'Samborondón', 'Naranjal', 'Balzar', 'Salitre', 'El Triunfo', 'Playas', 'Yaguachi', 'Naranjito', 'Coronel Marcelino Maridueña', 'Bucay', 'Palestina', 'Santa Lucía', 'Pedro Carbo', 'Lomas de Sargentillo', 'Nobol', 'Colimes', 'Balao', 'Isidro Ayora', 'Simón Bolívar'],
+  'Imbabura': ['Ibarra', 'Otavalo', 'Atuntaqui', 'Cotacachi', 'Pimampiro', 'Urcuquí'],
+  'Loja': ['Loja', 'Catamayo', 'Cariamanga', 'Macará', 'Catacocha', 'Celica', 'Saraguro', 'Alamor', 'Zapotillo', 'Pindal', 'Quilanga', 'Olmedo', 'Chaguarpamba', 'Sozoranga'],
+  'Los Ríos': ['Babahoyo', 'Quevedo', 'Ventanas', 'Vinces', 'Buena Fe', 'Valencia', 'Mocache', 'Puebloviejo', 'Urdaneta', 'Montalvo', 'Palenque', 'Baba'],
+  'Manabí': ['Portoviejo', 'Manta', 'Chone', 'Jipijapa', 'El Carmen', 'Bahía de Caráquez', 'Calceta', 'Pedernales', 'Tosagua', 'Rocafuerte', 'Puerto López', 'Junín', 'Pichincha', 'Paján', 'Santa Ana', 'Flavio Alfaro', 'Jaramijó', 'Jama', 'San Vicente', 'Olmedo', 'Montecristi'],
+  'Morona Santiago': ['Macas', 'Sucúa', 'Gualaquiza', 'Limón Indanza', 'Santiago', 'Palora', 'Taisha', 'Logroño', 'Pablo Sexto', 'Tiwintza', 'Huamboya', 'San Juan Bosco'],
+  'Napo': ['Tena', 'Archidona', 'El Chaco', 'Quijos', 'Carlos Julio Arosemena Tola'],
+  'Orellana': ['Francisco de Orellana', 'La Joya de los Sachas', 'Loreto', 'Aguarico'],
+  'Pastaza': ['Puyo', 'Mera', 'Santa Clara', 'Arajuno'],
+  'Pichincha': ['Quito', 'Sangolquí', 'Cayambe', 'Machachi', 'Tabacundo', 'Pedro Vicente Maldonado', 'San Miguel de los Bancos', 'Puerto Quito'],
+  'Santa Elena': ['Santa Elena', 'La Libertad', 'Salinas'],
+  'Santo Domingo de los Tsáchilas': ['Santo Domingo'],
+  'Sucumbíos': ['Nueva Loja', 'Shushufindi', 'Cascales', 'Gonzalo Pizarro', 'Putumayo', 'Cuyabeno', 'Sucumbíos'],
+  'Tungurahua': ['Ambato', 'Baños', 'Pelileo', 'Píllaro', 'Patate', 'Quero', 'Cevallos', 'Mocha', 'Tisaleo'],
+  'Zamora Chinchipe': ['Zamora', 'Yantzaza', 'Centinela del Cóndor', 'Zumba', 'Palanda', 'Paquisha', 'Yacuambi', 'El Pangui', 'Nangaritza']
+};
+
+const provincias = Object.keys(provinciasYCiudades);
+
+const ciudadesDisponibles = computed(() => {
+  return form.departamento ? provinciasYCiudades[form.departamento] : [];
+});
+
+const updateCiudades = () => {
+  form.ciudad = '';
+};
 
 const validateRuc = (ruc) => {
   if (ruc.length !== 13 || !/^\d{13}$/.test(ruc)) {
@@ -110,17 +144,14 @@ const validateRuc = (ruc) => {
 
   const thirdDigit = parseInt(ruc[2]);
   
-  // Validación para personas naturales y sociedades extranjeras sin cédula
   if (thirdDigit < 6) {
     return validateNaturalPerson(ruc);
   }
   
-  // Validación para sociedades públicas
   if (thirdDigit === 6) {
     return validatePublicCompany(ruc);
   }
   
-  // Validación para sociedades privadas y extranjeras
   if (thirdDigit === 9) {
     return validatePrivateCompany(ruc);
   }
@@ -168,7 +199,6 @@ const validatePrivateCompany = (ruc) => {
 };
 
 const submit = async () => {
-  // Validación de campos obligatorios
   if (!form.email || !form.razonSocial || !form.ruc) {
     errorMessage.value = 'Por favor complete todos los campos obligatorios';
     return;
@@ -179,14 +209,12 @@ const submit = async () => {
   successMessage.value = '';
 
   try {
-    // Validar RUC con el algoritmo
     if (!validateRuc(form.ruc)) {
       errorMessage.value = 'El RUC ingresado no es válido.';
       loading.value = false;
       return;
     }
 
-    // Verificar duplicados
     const duplicateCheck = await checkDuplicatePublisherData({ 
       name: form.ruc, 
       razonSocial: form.razonSocial, 
@@ -217,7 +245,7 @@ const submit = async () => {
     });
     successMessage.value = '¡Tu solicitud ha sido enviada exitosamente!';
     setTimeout(() => {
-      router.push('/login'); // Redirigir a la página de inicio de sesión
+      router.push('/login');
     }, 2000);
   } catch (error) {
     console.error('Error al enviar el formulario:', error);
@@ -228,7 +256,7 @@ const submit = async () => {
 };
 
 const cancel = () => {
-  router.push('/login'); // Redirigir a la página de inicio de sesión
+  router.push('/login');
 };
 </script>
 

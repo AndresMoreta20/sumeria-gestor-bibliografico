@@ -350,6 +350,20 @@ export const createAuthor = async (name) => {
   }
 };
 
+export const createPublisher = async (name) => {
+  try {
+    const response = await apiClient.post(
+      "/products/attributes/4/terms",
+      { name },
+      getAuth()
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error creating publisher:", error);
+    throw error;
+  }
+};
+
 // export const createCategory = async (name) => {
 //   try {
 //     const response = await apiClient.post(

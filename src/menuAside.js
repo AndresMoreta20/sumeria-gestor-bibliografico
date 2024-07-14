@@ -38,11 +38,11 @@ const adminMenu = [
     label: "Autores",
     icon: mdiAccount,
   },
-  // {
-  //   to: "/publishers",
-  //   label: "Editoriales",
-  //   icon: mdiStore,
-  // },
+  {
+    to: "/publishers",
+    label: "Editoriales",
+    icon: mdiStore,
+  },
   {
     to: "/languages",
     label: "Lenguajes",

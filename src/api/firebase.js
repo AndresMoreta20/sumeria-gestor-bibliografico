@@ -63,8 +63,21 @@ export const fetchRequestById = async (requestId) => {
 // Update the status of a request
 export const updateRequestStatus = async (requestId, status) => {
   try {
-    const docRef = doc(db, "bookRequests", requestId);
-    await updateDoc(docRef, { status });
+    let docRef;
+    const collections = ["bookRequests", "approvedBooks", "declinedBooks"];
+
+    for (const collectionName of collections) {
+      docRef = doc(db, collectionName, requestId);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        await updateDoc(docRef, { status });
+        console.log(`Request updated in ${collectionName} collection`);
+        return;
+      }
+    }
+
+    throw new Error("Request not found in any collection");
   } catch (error) {
     console.error("Error updating request status:", error);
     throw error;

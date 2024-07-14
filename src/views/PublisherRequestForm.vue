@@ -8,15 +8,19 @@
 
         <FormField label="RUC" help="RUC">
           <input v-model="form.ruc" name="ruc" required class="form-input w-full" />
+          <p v-if="errors.ruc" class="text-red-500">{{ errors.ruc }}</p>
         </FormField>
         <FormField label="Razón social de la editorial" help="Razón social">
           <input v-model="form.razonSocial" name="razonSocial" required class="form-input w-full" />
+          <p v-if="errors.razonSocial" class="text-red-500">{{ errors.razonSocial }}</p>
         </FormField>
         <FormField label="Correo electrónico" help="Correo electrónico">
           <input v-model="form.email" name="email" type="email" required class="form-input w-full" />
+          <p v-if="errors.email" class="text-red-500">{{ errors.email }}</p>
         </FormField>
         <FormField label="Sigla" help="Sigla">
           <input v-model="form.sigla" name="sigla" class="form-input w-full" />
+          <p v-if="errors.sigla" class="text-red-500">{{ errors.sigla }}</p>
         </FormField>
 
         <FormField label="Provincia" help="Provincia">
@@ -24,6 +28,7 @@
             <option value="" disabled selected>Seleccione una provincia</option>
             <option v-for="provincia in provincias" :key="provincia" :value="provincia">{{ provincia }}</option>
           </select>
+          <p v-if="errors.departamento" class="text-red-500">{{ errors.departamento }}</p>
         </FormField>
 
         <FormField label="Ciudad" help="Ciudad">
@@ -31,22 +36,27 @@
             <option value="" disabled selected>Seleccione una ciudad</option>
             <option v-for="ciudad in ciudadesDisponibles" :key="ciudad" :value="ciudad">{{ ciudad }}</option>
           </select>
+          <p v-if="errors.ciudad" class="text-red-500">{{ errors.ciudad }}</p>
         </FormField>
 
         <FormField label="Dirección" help="Dirección">
           <input v-model="form.direccion" name="direccion" required class="form-input w-full" />
+          <p v-if="errors.direccion" class="text-red-500">{{ errors.direccion }}</p>
         </FormField>
 
         <FormField label="Código Postal" help="Código Postal">
           <input v-model="form.codigoPostal" name="codigoPostal" type="text" required class="form-input w-full" />
+          <p v-if="errors.codigoPostal" class="text-red-500">{{ errors.codigoPostal }}</p>
         </FormField>
 
         <FormField label="Teléfono" help="Teléfono">
           <input v-model="form.telefono" name="telefono" type="tel" required class="form-input w-full" />
+          <p v-if="errors.telefono" class="text-red-500">{{ errors.telefono }}</p>
         </FormField>
 
         <FormField label="Página web o URL" help="Página web">
           <input v-model="form.paginaWeb" name="paginaWeb" type="url" class="form-input w-full" />
+          <p v-if="errors.paginaWeb" class="text-red-500">{{ errors.paginaWeb }}</p>
         </FormField>
 
         <template #footer>
@@ -64,7 +74,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed } from 'vue';
+import { reactive, ref, computed, watch } from 'vue';
 import { collection, addDoc, getFirestore } from 'firebase/firestore';
 import SectionMain from '@/components/SectionMain.vue';
 import CardBox from '@/components/CardBox.vue';
@@ -74,6 +84,8 @@ import BaseButtons from '@/components/BaseButtons.vue';
 import LayoutGuest from '@/layouts/LayoutGuest.vue';
 import { useRouter } from 'vue-router';
 import { checkDuplicatePublisherData } from '@/api/firebase';
+import { validateZipCode } from '@/utils/zipcode';
+
 
 const router = useRouter();
 
@@ -89,6 +101,20 @@ const form = reactive({
   telefono: '',
   paginaWeb: '',
   email: '',
+});
+
+const errors = reactive({
+  ruc: '',
+  razonSocial: '',
+  sigla: '',
+  departamento: '',
+  ciudad: '',
+  direccion: '',
+  codigoPostal: '',
+  telefono: '',
+  paginaWeb: '',
+  email: '',
+  codigoPostal:'',
 });
 
 const loading = ref(false);
@@ -134,29 +160,40 @@ const updateCiudades = () => {
 
 const validateRuc = (ruc) => {
   if (ruc.length !== 13 || !/^\d{13}$/.test(ruc)) {
+    errors.ruc = "El RUC debe tener 13 dígitos y ser válido para Ecuador.";
     return false;
   }
   
   const provinceCode = parseInt(ruc.substring(0, 2));
   if (provinceCode < 1 || provinceCode > 24) {
+    errors.ruc = "El código de provincia del RUC no es válido.";
     return false;
   }
 
   const thirdDigit = parseInt(ruc[2]);
   
   if (thirdDigit < 6) {
-    return validateNaturalPerson(ruc);
-  }
-  
-  if (thirdDigit === 6) {
-    return validatePublicCompany(ruc);
-  }
-  
-  if (thirdDigit === 9) {
-    return validatePrivateCompany(ruc);
+    if (!validateNaturalPerson(ruc)) {
+      errors.ruc = "El RUC no es válido.";
+      return false;
+    }
+  } else if (thirdDigit === 6) {
+    if (!validatePublicCompany(ruc)) {
+      errors.ruc = "El RUC no es válido.";
+      return false;
+    }
+  } else if (thirdDigit === 9) {
+    if (!validatePrivateCompany(ruc)) {
+      errors.ruc = "El RUC no es válido.";
+      return false;
+    }
+  } else {
+    errors.ruc = "El tercer dígito del RUC no es válido.";
+    return false;
   }
 
-  return false;
+  errors.ruc = '';
+  return true;
 };
 
 const validateNaturalPerson = (ruc) => {
@@ -198,9 +235,138 @@ const validatePrivateCompany = (ruc) => {
   return (checkDigit === 11 ? 0 : checkDigit) === parseInt(ruc[9]);
 };
 
+const validateEmail = (email) => {
+  const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  const commonDomains = ['gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com'];
+  
+  if (!regex.test(email)) {
+    errors.email = "Por favor, ingrese un correo electrónico válido.";
+    return false;
+  }
+
+  const domain = email.split('@')[1];
+  if (commonDomains.includes(domain.toLowerCase())) {
+    errors.email = '';
+    return true;
+  }
+
+  errors.email = "Verifique el dominio del correo electrónico.";
+  return false;
+};
+
+const validatePhoneNumber = (phone) => {
+  const mobileRegex = /^09\d{8}$/;
+  const landlineRegex = /^0[2-7]\d{7}$/;
+
+  if (mobileRegex.test(phone) || landlineRegex.test(phone)) {
+    errors.telefono = '';
+    return true;
+  }
+
+  errors.telefono = "Ingrese un número de teléfono válido de Ecuador (09 para celulares, 02/03/04/05/06/07 para fijos).";
+  return false;
+};
+
+const validateWebsite = (url) => {
+  if (!url) {
+    errors.paginaWeb = '';
+    return true;  // La página web es opcional
+  }
+
+  const regex = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+  if (!regex.test(url)) {
+    errors.paginaWeb = "Ingrese una URL válida (ej. www.ejemplo.com).";
+    return false;
+  }
+
+  errors.paginaWeb = '';
+  return true;
+};
+
+const validateZipCodeField = async () => {
+  console.log('Validating zip code field');
+  if (!form.codigoPostal || !form.ciudad) {
+    console.log('Missing required fields for zip code validation');
+    errors.codigoPostal = 'Por favor, complete el código postal y la ciudad.';
+    return false;
+  }
+
+  console.log(`Calling validateZipCode with: ${form.codigoPostal}, ${form.ciudad}`);
+  const isValid = await validateZipCode(form.codigoPostal, form.ciudad);
+  console.log('Zip code validation result:', isValid);
+
+  if (!isValid) {
+    errors.codigoPostal = 'El código postal no es válido para la ciudad seleccionada.';
+    return false;
+  }
+
+  errors.codigoPostal = '';
+  return true;
+};
+
+// Watchers para validación en tiempo real
+watch(() => form.ruc, (newValue) => validateRuc(newValue));
+watch(() => form.razonSocial, (newValue) => {
+  if (newValue.length < 3 || newValue.length > 100) {
+    errors.razonSocial = "La razón social debe tener entre 3 y 100 caracteres.";
+  } else {
+    errors.razonSocial = '';
+  }
+});
+watch(() => form.email, (newValue) => validateEmail(newValue));
+watch(() => form.sigla, (newValue) => {
+  if (newValue.length > 10) {
+    errors.sigla = "La sigla no debe exceder los 10 caracteres.";
+  } else {
+    errors.sigla = '';
+  }
+});
+watch(() => form.departamento, (newValue) => {
+  if (!newValue) {
+    errors.departamento = "Por favor, seleccione una provincia.";
+  } else {
+    errors.departamento = '';
+  }
+});
+watch(() => form.ciudad, (newValue) => {
+  if (!newValue) {
+    errors.ciudad = "Por favor, seleccione una ciudad.";
+  } else {
+    errors.ciudad = '';
+  }
+});
+watch(() => form.direccion, (newValue) => {
+  if (newValue.length < 5) {
+    errors.direccion = "La dirección debe tener al menos 5 caracteres.";
+  } else {
+    errors.direccion = '';
+  }
+});
+
+watch([() => form.codigoPostal, () => form.ciudad], async ([newZipCode, newCity]) => {
+  console.log('Zip code or city changed:', newZipCode, newCity);
+  if (newZipCode && newCity) {
+    console.log('Both fields filled, validating zip code');
+    await validateZipCodeField();
+  } else {
+    console.log('Not all fields filled, skipping validation');
+  }
+});
+
+watch(() => form.telefono, (newValue) => validatePhoneNumber(newValue));
+watch(() => form.paginaWeb, (newValue) => validateWebsite(newValue));
+
 const submit = async () => {
-  if (!form.email || !form.razonSocial || !form.ruc) {
-    errorMessage.value = 'Por favor complete todos los campos obligatorios';
+  const isValid = validateRuc(form.ruc) &&
+                  validateEmail(form.email) &&
+                  validatePhoneNumber(form.telefono) &&
+                  validateWebsite(form.paginaWeb) &&
+                  await validateZipCodeField();
+
+                  console.log('Form validation result:', isValid);
+
+  if (!isValid) {
+    errorMessage.value = 'Por favor, corrija los errores en el formulario antes de enviar.';
     return;
   }
 
@@ -209,12 +375,6 @@ const submit = async () => {
   successMessage.value = '';
 
   try {
-    if (!validateRuc(form.ruc)) {
-      errorMessage.value = 'El RUC ingresado no es válido.';
-      loading.value = false;
-      return;
-    }
-
     const duplicateCheck = await checkDuplicatePublisherData({ 
       name: form.ruc, 
       razonSocial: form.razonSocial, 

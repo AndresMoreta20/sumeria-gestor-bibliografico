@@ -10,6 +10,9 @@ import BaseButtons from '@/components/BaseButtons.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import FormControl from '@/components/FormControl.vue'
 
+const isAlertModalActive = ref(false)
+const isSuccessModalActive = ref(false)
+const isLoadingModalActive = ref(false)
 const router = useRouter()
 
 const props = defineProps({
@@ -94,26 +97,32 @@ const viewItem = (item) => {
 const editItem = (item) => {
   selectedItem.value = item
   editedValue.value = item.name
-  isEditModalActive.value = true
+  isAlertModalActive.value = true
   errorMessage.value = ''
 }
 
+const confirmEdit = () => {
+  isAlertModalActive.value = false
+  isEditModalActive.value = true
+}
 const saveEdit = async () => {
   if (!selectedItem.value || !props.updateFunction) return
 
-  isLoading.value = true
+  isEditModalActive.value = false
+  isLoadingModalActive.value = true
   errorMessage.value = ''
 
   try {
     const updatedItem = await props.updateFunction(selectedItem.value.id, { name: editedValue.value })
     Object.assign(selectedItem.value, updatedItem)
-    isEditModalActive.value = false
+    isLoadingModalActive.value = false
+    isSuccessModalActive.value = true
     emit('itemUpdated', updatedItem)
   } catch (error) {
     console.error('Error updating item:', error)
     errorMessage.value = `Error al actualizar: ${error.response?.data?.message || error.message}`
-  } finally {
-    isLoading.value = false
+    isLoadingModalActive.value = false
+    isEditModalActive.value = true
   }
 }
 
@@ -126,8 +135,15 @@ const closeViewModal = () => {
 }
 
 const closeEditModal = () => {
-  isEditModalActive.value = false
+  if (!isLoading.value) {
+    isEditModalActive.value = false
+  }
 }
+const closeSuccessModal = () => {
+  isSuccessModalActive.value = false
+}
+
+
 </script>
 
 <template>
@@ -147,22 +163,72 @@ const closeEditModal = () => {
   </CardBoxModal>
 
   <CardBoxModal
-    v-model="isEditModalActive"
-    title="Editar elemento"
-    button="info"
-    has-cancel
-    @confirm="saveEdit"
-    @cancel="closeEditModal"
-  >
-    <div v-if="selectedItem">
-      <FormControl
-        v-model="editedValue"
-        label="Nombre"
-        placeholder="Editar nombre"
-      />
-      <p v-if="errorMessage" class="text-red-500 mt-2">{{ errorMessage }}</p>
+  v-model="isAlertModalActive"
+  title="Advertencia"
+  button="danger"
+  has-cancel
+  @confirm="confirmEdit"
+  @cancel="isAlertModalActive = false"
+>
+  <p>¿Estás seguro que deseas editar este elemento?</p>
+  <p class="mt-2 font-bold">Advertencia: Editar modificará todos los libros relacionados a este campo.</p>
+</CardBoxModal>
+
+
+<CardBoxModal
+  v-model="isEditModalActive"
+  title="Editar elemento"
+  :button="isLoading ? null : 'warning'"
+  :has-cancel="!isLoading"
+  @confirm="saveEdit"
+  @cancel="closeEditModal"
+  :cancelable="!isLoading"
+>
+  <div v-if="selectedItem">
+    <FormControl
+      v-model="editedValue"
+      label="Nombre"
+      placeholder="Editar nombre"
+      :disabled="isLoading"
+    />
+    <p v-if="errorMessage" class="text-red-500 mt-2">{{ errorMessage }}</p>
+    <div v-if="isLoading" class="text-center mt-4">
+      <span class="loading loading-spinner loading-md"></span>
+      <p>Actualizando...</p>
     </div>
-  </CardBoxModal>
+  </div>
+  <template #footer>
+    <BaseButtons v-if="!isLoading">
+      <BaseButton label="Cancelar" color="info" @click="closeEditModal" />
+      <BaseButton label="Guardar" color="warning" @click="saveEdit" />
+    </BaseButtons>
+    <div v-else class="text-center">
+      <span class="loading loading-spinner loading-md"></span>
+      <p>Actualizando...</p>
+    </div>
+  </template>
+</CardBoxModal>
+
+
+<CardBoxModal
+  v-model="isLoadingModalActive"
+  title="Actualizando"
+  :cancelable="false"
+>
+  <div class="text-center">
+    <span class="loading loading-spinner loading-lg"></span>
+    <p class="mt-4">Actualizando...</p>
+  </div>
+</CardBoxModal>
+
+<CardBoxModal
+  v-model="isSuccessModalActive"
+  title="Actualización exitosa"
+  button="success"
+  @confirm="closeSuccessModal"
+>
+  <p>El elemento se ha actualizado con éxito.</p>
+</CardBoxModal>
 
   <div class="flex justify-between items-center mb-4">
     <div class="relative w-full">

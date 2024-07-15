@@ -10,10 +10,44 @@ import { db } from "@/firebase";
 
 const pinia = createPinia();
 const app = createApp(App);
-
-app.use(router).use(pinia).mount("#app");
-
 const mainStore = useMainStore(pinia);
+
+let appInitialized = false;
+
+const initializeApp = async () => {
+  const auth = getAuth();
+  const user = auth.currentUser;
+
+  if (user) {
+    const userRole = sessionStorage.getItem("user-role");
+    const userName = sessionStorage.getItem("user-name");
+    const userEmail = sessionStorage.getItem("user-email");
+    const userToken = sessionStorage.getItem("user-token");
+
+    mainStore.setUser({
+      name: userName,
+      email: userEmail,
+      token: userToken,
+      role: userRole,
+    });
+
+    if (userRole === "publisher") {
+      const docRef = doc(db, "publishers", user.uid);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists() && docSnap.data().needsPasswordChange) {
+        router.push("/changePassword");
+      }
+    }
+  } else {
+    mainStore.resetUser();
+  }
+
+  if (!appInitialized) {
+    app.use(router).use(pinia).mount("#app");
+    appInitialized = true;
+  }
+};
 
 // Fetch sample data if functions exist
 if (typeof mainStore.fetchSampleClients === "function") {
@@ -69,19 +103,4 @@ router.beforeEach(async (to, from, next) => {
   }
 });
 
-onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    mainStore.setIsAuthenticated(true);
-    const userRole = sessionStorage.getItem("user-role");
-    if (userRole === "publisher") {
-      const docRef = doc(db, "publishers", user.uid);
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists() && docSnap.data().needsPasswordChange) {
-        router.push("/changePassword");
-      }
-    }
-  } else {
-    mainStore.setIsAuthenticated(false);
-  }
-});
+onAuthStateChanged(auth, initializeApp);

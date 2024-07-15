@@ -52,6 +52,15 @@
                 <option value="declined">Rechazada</option>
               </select>
             </div>
+            <div class="relative">
+              <div class="flex items-center">
+                <span class="mr-2">Mostrar archivadas</span>
+                <label class="switch">
+                  <input type="checkbox" v-model="filters.showArchived" @change="applyFilters">
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </div>
           </div>
 
           <table class="table-auto w-full">
@@ -172,6 +181,7 @@ const filters = ref({
   search: "",
   category: "",
   status: "",
+  showArchived: false,
 });
 
 const currentPage = ref(1);
@@ -275,6 +285,7 @@ const sortTable = (key) => {
 };
 
 const filteredRequests = computed(() => {
+  console.log("Filtering requests. showArchived:", filters.value.showArchived);
   const sortedRequests = [...requests.value].sort((a, b) => {
     const aValue = a[sortKey.value];
     const bValue = b[sortKey.value];
@@ -296,7 +307,10 @@ const filteredRequests = computed(() => {
       request.category === filters.value.category;
     const statusMatch =
       filters.value.status === "" || request.status === filters.value.status;
-    return searchMatch && categoryMatch && statusMatch;
+    const archivedMatch = filters.value.showArchived
+      ? request.status === "archived"
+      : request.status !== "archived";
+    return searchMatch && categoryMatch && statusMatch && archivedMatch;
   });
 });
 
@@ -329,5 +343,56 @@ onMounted(async () => {
 <style scoped>
 .loader {
   border-top-color: #3490dc;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #2196F3;
+}
+
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
 }
 </style>

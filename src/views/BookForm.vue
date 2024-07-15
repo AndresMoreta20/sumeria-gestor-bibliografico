@@ -1,7 +1,7 @@
 <!--BookForm.vue VERSION 2-->
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import SectionMain from "@/components/SectionMain.vue";
 import CardBox from "@/components/CardBox.vue";
@@ -25,6 +25,7 @@ import {
 const route = useRoute();
 const router = useRouter();
 const bookData = route.query.bookData ? JSON.parse(route.query.bookData) : null;
+const errors = ref({}); 
 
 const form = ref({
   name: bookData ? bookData.name : "",
@@ -143,30 +144,47 @@ const cancel = () => {
 const buttonLabel = computed(() =>
   route.query.bookData ? "Actualizar Libro" : "Crear Libro"
 );
-
 const stripHtmlTags = (html) => {
   const doc = new DOMParser().parseFromString(html, "text/html");
   return doc.body.textContent || "";
 };
 
-const validateForm = () => {
-  const errors = {};
-  if (!form.value.name) errors.name = "El nombre es requerido";
-  if (!form.value.price) errors.price = "El precio es requerido";
-  if (!form.value.stock_quantity)
-    errors.stock_quantity = "La cantidad en stock es requerida";
-  if (!form.value.categories) errors.categories = "La categoría es requerida";
-  if (!form.value.author) errors.author = "El autor es requerido";
-  if (!form.value.language) errors.language = "El idioma es requerido";
-  if (!form.value.isbn) errors.isbn = "El ISBN es requerido";
-  if (!form.value.short_description)
-    errors.short_description = "La descripción corta es requerida";
-  if (!form.value.description)
-    errors.description = "La descripción es requerida";
 
-  error.value = Object.keys(errors).length ? errors : null;
-  return !error.value;
+const validateForm = () => {
+  errors.value = {};
+  if (!form.value.name) errors.value.name = "El nombre es requerido";
+  if (!form.value.price) errors.value.price = "El precio es requerido";
+  if (!form.value.stock_quantity) errors.value.stock_quantity = "La cantidad en stock es requerida";
+  if (!form.value.categories) errors.value.categories = "La categoría es requerida";
+  if (!form.value.author) errors.value.author = "El autor es requerido";
+  if (!form.value.language) errors.value.language = "El idioma es requerido";
+  if (!form.value.isbn) errors.value.isbn = "El ISBN es requerido";
+  if (!form.value.short_description) errors.value.short_description = "La descripción corta es requerida";
+  if (!form.value.description) errors.value.description = "La descripción es requerida";
+  
+  if (parseFloat(form.value.sale_price) > parseFloat(form.value.price)) {
+    errors.value.sale_price = "El precio de oferta no puede ser mayor al precio regular";
+  }
+
+  return Object.keys(errors.value).length === 0;
 };
+
+// Validación activa
+watch(form, () => {
+  validateForm();
+}, { deep: true });
+
+// Función para eliminar etiquetas HTML
+
+// Procesar descripciones al cargar los datos
+onMounted(() => {
+  if (bookData) {
+    form.value.short_description = stripHtmlTags(form.value.short_description);
+    form.value.description = stripHtmlTags(form.value.description);
+  }
+});
+
+
 </script>
 
 <template>
@@ -188,7 +206,7 @@ const validateForm = () => {
             message
           }}</span>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6"> 
           <FormField label="Imagen de Portada">
             <img
               v-if="imagePreview"
@@ -214,18 +232,18 @@ const validateForm = () => {
         </div>
         <BaseDivider />
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField label="Nombre" :error="error?.name">
+          <FormField label="Nombre" :class="{ 'text-red-500': errors.name }">
             <FormControl
               v-model="form.name"
               type="text"
               placeholder="Nombre del libro"
+              :class="{ 'border-red-500': errors.name }"
             />
+            <p v-if="errors.name" class="text-red-500 text-sm mt-1">{{ errors.name }}</p>
           </FormField>
-          <FormField label="Precio" :error="error?.price">
+          <FormField label="Precio" :class="{ 'text-red-500': errors.price }">
             <div class="relative">
-              <span
-                class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-600"
-              >
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-600">
                 $
               </span>
               <FormControl
@@ -235,14 +253,14 @@ const validateForm = () => {
                 min="0"
                 placeholder="Precio del libro"
                 class="pl-7"
+                :class="{ 'border-red-500': errors.price }"
               />
             </div>
+            <p v-if="errors.price" class="text-red-500 text-sm mt-1">{{ errors.price }}</p>
           </FormField>
-          <FormField label="Precio de oferta">
+          <FormField label="Precio de oferta" :class="{ 'text-red-500': errors.sale_price }">
             <div class="relative">
-              <span
-                class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-600"
-              >
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-600">
                 $
               </span>
               <FormControl
@@ -252,85 +270,84 @@ const validateForm = () => {
                 min="0"
                 placeholder="Precio de oferta"
                 class="pl-7"
+                :class="{ 'border-red-500': errors.sale_price }"
               />
             </div>
+            <p v-if="errors.sale_price" class="text-red-500 text-sm mt-1">{{ errors.sale_price }}</p>
           </FormField>
-          <FormField label="Cantidad en Stock" :error="error?.stock_quantity">
-            <FormControl
-              v-model="form.stock_quantity"
-              type="number"
-              min="0"
-              placeholder="Cantidad en stock"
-            />
-          </FormField>
-          <FormField label="Categoría" :error="error?.categories">
+          <!-- ... (otros campos del formulario) -->
+          <FormField label="Categoría" :class="{ 'text-red-500': errors.categories }">
             <select
               v-model="form.categories"
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              :class="{ 'border-red-500': errors.categories }"
             >
               <option value="">Seleccionar categoría</option>
               <option
                 v-for="category in categories"
                 :key="category.id"
                 :value="category.id"
+                :selected="category.id === parseInt(form.categories)"
               >
                 {{ category.name }}
               </option>
             </select>
+            <p v-if="errors.categories" class="text-red-500 text-sm mt-1">{{ errors.categories }}</p>
           </FormField>
-          <FormField label="Autor" :error="error?.author">
+          <FormField label="Autor" :class="{ 'text-red-500': errors.author }">
             <select
               v-model="form.author"
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              :class="{ 'border-red-500': errors.author }"
             >
               <option value="">Seleccionar autor</option>
               <option
                 v-for="author in authors"
                 :key="author.id"
                 :value="author.name"
+                :selected="author.name === form.author"
               >
                 {{ author.name }}
               </option>
             </select>
+            <p v-if="errors.author" class="text-red-500 text-sm mt-1">{{ errors.author }}</p>
           </FormField>
-          <FormField label="Idioma" :error="error?.language">
+          <FormField label="Idioma" :class="{ 'text-red-500': errors.language }">
             <select
               v-model="form.language"
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              :class="{ 'border-red-500': errors.language }"
             >
               <option value="">Seleccionar idioma</option>
               <option
                 v-for="language in languages"
                 :key="language.id"
                 :value="language.name"
+                :selected="language.name === form.language"
               >
                 {{ language.name }}
               </option>
             </select>
-          </FormField>
-          <FormField label="ISBN" :error="error?.isbn">
-            <FormControl
-              v-model="form.isbn"
-              type="text"
-              placeholder="ISBN del libro"
-            />
-          </FormField>
-          <FormField label="Editorial">
-            <FormControl
-              v-model="form.editorial"
-              type="text"
-              placeholder="Editorial del libro"
-              disabled
-            />
+            <p v-if="errors.language" class="text-red-500 text-sm mt-1">{{ errors.language }}</p>
           </FormField>
         </div>
-        <FormField label="Descripción corta" :error="error?.short_description">
+        <FormField label="Descripción corta" :class="{ 'text-red-500': errors.short_description }">
           <FormControl
             v-model="form.short_description"
             type="textarea"
             placeholder="Descripción corta del libro"
-            @input="form.short_description = stripHtmlTags($event.target.value)"
+            :class="{ 'border-red-500': errors.short_description }"
           />
+          <p v-if="errors.short_description" class="text-red-500 text-sm mt-1">{{ errors.short_description }}</p>
+        </FormField>
+        <FormField label="Descripción" :class="{ 'text-red-500': errors.description }">
+          <FormControl
+            v-model="form.description"
+            type="textarea"
+            placeholder="Descripción completa del libro"
+            :class="{ 'border-red-500': errors.description }"
+          />
+          <p v-if="errors.description" class="text-red-500 text-sm mt-1">{{ errors.description }}</p>
         </FormField>
         <FormField label="Descripción" :error="error?.description">
           <FormControl

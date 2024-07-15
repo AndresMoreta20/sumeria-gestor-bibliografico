@@ -4,6 +4,9 @@ import App from "./App.vue";
 import router from "./router";
 import { useMainStore } from "@/stores/main.js";
 import "./css/main.css";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/firebase";
 
 const pinia = createPinia();
 const app = createApp(App);
@@ -28,7 +31,9 @@ router.afterEach((to) => {
     : defaultDocumentTitle;
 });
 
-router.beforeEach((to, from, next) => {
+const auth = getAuth();
+
+router.beforeEach(async (to, from, next) => {
   if (to.matched.some((record) => record.meta.requiresAuth)) {
     if (!mainStore.isAuthenticated) {
       next({
@@ -36,9 +41,47 @@ router.beforeEach((to, from, next) => {
         query: { redirect: to.fullPath },
       });
     } else {
-      next();
+      const userRole = sessionStorage.getItem("user-role");
+      if (userRole === "publisher") {
+        const user = auth.currentUser;
+        if (user) {
+          const docRef = doc(db, "publishers", user.uid);
+          const docSnap = await getDoc(docRef);
+
+          if (
+            docSnap.exists() &&
+            docSnap.data().needsPasswordChange &&
+            to.path !== "/changePassword"
+          ) {
+            next("/changePassword");
+          } else {
+            next();
+          }
+        } else {
+          next();
+        }
+      } else {
+        next();
+      }
     }
   } else {
     next();
+  }
+});
+
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    mainStore.setIsAuthenticated(true);
+    const userRole = sessionStorage.getItem("user-role");
+    if (userRole === "publisher") {
+      const docRef = doc(db, "publishers", user.uid);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists() && docSnap.data().needsPasswordChange) {
+        router.push("/changePassword");
+      }
+    }
+  } else {
+    mainStore.setIsAuthenticated(false);
   }
 });

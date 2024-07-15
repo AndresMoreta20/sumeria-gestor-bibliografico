@@ -204,6 +204,7 @@ const approveRequest = async () => {
       departamento: form.departamento,
       telefono: form.telefono,
       paginaWeb: form.paginaWeb,
+      needsPasswordChange:true,
       createdAt: new Date(),
     });
 

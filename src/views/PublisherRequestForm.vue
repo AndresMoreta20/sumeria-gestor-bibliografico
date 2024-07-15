@@ -236,22 +236,43 @@ const validatePrivateCompany = (ruc) => {
 };
 
 const validateEmail = (email) => {
-  const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-  const commonDomains = ['gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com'];
-  
+  // Expresión regular basada en el estándar RFC 5322
+  const regex = /^(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])$/i;
+
   if (!regex.test(email)) {
     errors.email = "Por favor, ingrese un correo electrónico válido.";
     return false;
   }
 
-  const domain = email.split('@')[1];
-  if (commonDomains.includes(domain.toLowerCase())) {
-    errors.email = '';
-    return true;
+  // Verificaciones adicionales
+  const [localPart, domain] = email.split('@');
+
+  // Verificar longitud del correo completo
+  if (email.length > 254) {
+    errors.email = "El correo electrónico es demasiado largo.";
+    return false;
   }
 
-  errors.email = "Verifique el dominio del correo electrónico.";
-  return false;
+  // Verificar longitud de la parte local
+  if (localPart.length > 64) {
+    errors.email = "La parte local del correo es demasiado larga.";
+    return false;
+  }
+
+  // Verificar dominio
+  if (!/^[a-zA-Z0-9.-]+$/.test(domain)) {
+    errors.email = "El dominio del correo contiene caracteres no permitidos.";
+    return false;
+  }
+
+  // Verificar que el dominio tenga al menos un punto
+  if (!domain.includes('.')) {
+    errors.email = "El dominio del correo no es válido.";
+    return false;
+  }
+
+  errors.email = '';
+  return true;
 };
 
 const validatePhoneNumber = (phone) => {

@@ -1,4 +1,3 @@
-<!--TableRequests-->
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
@@ -19,6 +18,7 @@ import {
   mdiRestore,
   mdiChevronLeft,
   mdiChevronRight,
+  mdiPencil,
 } from "@mdi/js";
 
 const router = useRouter();
@@ -111,6 +111,13 @@ const toggleRequestStatus = async (request) => {
   } finally {
     loadingStates.value[request.id] = false;
   }
+};
+
+const editDeclinedRequest = (request) => {
+  router.push({ 
+    name: 'requestForm', 
+    query: { appeal: 'true', id: request.id }
+  });
 };
 
 const statusClass = (status) => {
@@ -307,6 +314,13 @@ onMounted(async () => {
                   small
                   @click="() => toggleRequestStatus(request)"
                   :disabled="loadingStates[request.id]"
+                />
+                <BaseButton
+                  v-if="request.status === 'declined'"
+                  color="info"
+                  :icon="mdiPencil"
+                  small
+                  @click="() => editDeclinedRequest(request)"
                 />
               </td>
             </tr>

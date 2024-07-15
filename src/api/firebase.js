@@ -10,6 +10,50 @@ import {
 } from "firebase/firestore";
 import { db } from "@/firebase";
 
+// Añade estas importaciones al principio del archivo
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { v4 as uuidv4 } from "uuid";
+
+// Función para subir una imagen de portada
+export const uploadCoverImage = async (file) => {
+  try {
+    const storage = getStorage();
+    const fileExtension = file.name.split(".").pop();
+    const fileName = `${uuidv4()}.${fileExtension}`;
+    const storageRef = ref(storage, `covers/${fileName}`);
+
+    const snapshot = await uploadBytes(storageRef, file);
+    const downloadURL = await getDownloadURL(snapshot.ref);
+
+    console.log("Cover image uploaded successfully");
+    return downloadURL;
+  } catch (error) {
+    console.error("Error uploading cover image:", error);
+    throw error;
+  }
+};
+
+// Función para subir un archivo EPUB
+export const uploadEpubFile = async (file) => {
+  try {
+    const storage = getStorage();
+    const fileExtension = file.name.split(".").pop();
+    const fileName = `${uuidv4()}.${fileExtension}`;
+    const storageRef = ref(storage, `books/${fileName}`);
+
+    const snapshot = await uploadBytes(storageRef, file);
+    const downloadURL = await getDownloadURL(snapshot.ref);
+
+    console.log("EPUB file uploaded successfully");
+    return downloadURL;
+  } catch (error) {
+    console.error("Error uploading EPUB file:", error);
+    throw error;
+  }
+};
+
+// ... (resto del código existente)
+
 // Fetch all book requests
 export const fetchRequests = async () => {
   try {

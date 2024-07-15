@@ -20,6 +20,7 @@
     "firebase": "^10.12.2",
     "numeral": "^2.0.6",
     "pinia": "^2.1.7",
+    "uuid": "^10.0.0",
     "vue": "^3.4.21",
     "vue-email": "^0.8.11",
     "vue-router": "4"

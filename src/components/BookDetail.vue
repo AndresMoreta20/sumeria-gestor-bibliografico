@@ -1,3 +1,4 @@
+<!--BookDetail.vue-->
 <script setup>
 import { ref, onMounted } from "vue";
 import axios from "axios";
@@ -57,7 +58,8 @@ onMounted(fetchBookDetails);
     <div v-else>
       <h2 class="text-2xl font-semibold mb-4">{{ book?.name }}</h2>
       <img :src="book?.images[0]?.src" alt="Book cover" class="h-48 w-32 object-cover mb-4"/>
-      <p><strong>Precio:</strong> ${{ book?.price }}</p>
+      <p><strong>Precio regular:</strong> ${{ book?.regular_price }}</p>
+      <p v-if="book?.sale_price"><strong>Precio de oferta:</strong> ${{ book?.sale_price }}</p>
       <p v-if="book?.virtual != true"><strong>Stock:</strong> {{ book?.stock_quantity }}</p>
       <p><strong>Descripción:</strong> <span v-html="book?.description"></span></p>
       <p><strong>Categoría:</strong> {{ book?.categories[0]?.name }}</p>
@@ -65,7 +67,7 @@ onMounted(fetchBookDetails);
       <p><strong>Autor:</strong> {{ book?.attributes.find(attr => attr.name === 'Autor')?.options[0] }}</p>
       <p><strong>ISBN:</strong> {{ book?.attributes.find(attr => attr.name === 'ISBN')?.options[0] }}</p>
       <p><strong>Editorial:</strong> {{ book?.attributes.find(attr => attr.name === 'Editorial')?.options[0] }}</p>
-      <p><strong>Estado:</strong> {{ book?.attributes.find(attr => attr.name === 'Estado')?.options[0] }}</p>
+      <p><strong>Idioma:</strong> {{ book?.attributes.find(attr => attr.name === 'Idioma')?.options[0] }}</p>
       <div class="flex space-x-4 mt-4">
         <button @click="$emit('close')" class="bg-blue-500 text-white py-2 px-4 rounded">
           Cerrar

@@ -1,194 +1,111 @@
 <script setup>
-import { reactive, onMounted } from 'vue'
-import { useMainStore } from '@/stores/main'
-import { mdiAsterisk, mdiFormTextboxPassword } from '@mdi/js'
+import { ref } from 'vue'
+import { getAuth, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
+import { mdiEyeOutline, mdiEyeOffOutline } from '@mdi/js'
 import SectionMain from '@/components/SectionMain.vue'
 import CardBox from '@/components/CardBox.vue'
-import BaseDivider from '@/components/BaseDivider.vue'
 import FormField from '@/components/FormField.vue'
 import FormControl from '@/components/FormControl.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseButtons from '@/components/BaseButtons.vue'
 import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue'
-import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
-import { db } from "@/firebase";
 
-const mainStore = useMainStore()
+const auth = getAuth();
+const user = auth.currentUser;
 
-const profileForm = reactive({
-  ciudad: '',
-  createdAt: '',
-  departamento: '',
-  direccion: '',
-  email: '',
-  paginaWeb: '',
-  razonSocial: '',
-  ruc: '',
-  telefono: ''
+const passwordForm = ref({
+  currentPassword: '',
+  newPassword: '',
+  confirmNewPassword: '',
 })
 
-const fetchProfileData = async () => {
-  const userToken = sessionStorage.getItem('user-token');
-  if (!userToken) {
-    alert('User token is not available');
-    return;
+const passwordVisible = ref({
+  current: false,
+  new: false,
+  confirm: false,
+})
+
+const error = ref('')
+const success = ref('')
+
+const togglePasswordVisibility = (field) => {
+  passwordVisible.value[field] = !passwordVisible.value[field]
+}
+
+const changePassword = async () => {
+  error.value = ''
+  success.value = ''
+
+  if (passwordForm.value.newPassword !== passwordForm.value.confirmNewPassword) {
+    error.value = 'Las contraseñas nuevas no coinciden.'
+    return
   }
 
   try {
-    const docRef = doc(db, "publishers", userToken);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      console.log("Document data:", data); // Log the document data
-      profileForm.ciudad = data.ciudad || '';
-      profileForm.createdAt = data.createdAt || '';
-      profileForm.departamento = data.departamento || '';
-      profileForm.direccion = data.direccion || '';
-      profileForm.email = data.email || '';
-      profileForm.paginaWeb = data.paginaWeb || '';
-      profileForm.razonSocial = data.razonSocial || '';
-      profileForm.ruc = data.ruc || '';
-      profileForm.telefono = data.telefono || '';
-    } else {
-      console.error("No such document!");
-      // Optionally, create the document if it does not exist
-      await setDoc(docRef, {
-        ciudad: '',
-        createdAt: new Date().toISOString(),
-        departamento: '',
-        direccion: '',
-        email: '', // This can be set if you have it
-        paginaWeb: '',
-        razonSocial: '',
-        ruc: '',
-        telefono: ''
-      });
-      console.log("Document created with default values.");
-    }
-  } catch (error) {
-    console.error("Error fetching profile data:", error);
+    const credential = EmailAuthProvider.credential(
+      user.email,
+      passwordForm.value.currentPassword
+    )
+
+    await reauthenticateWithCredential(user, credential)
+    await updatePassword(user, passwordForm.value.newPassword)
+
+    success.value = 'Contraseña actualizada con éxito.'
+    passwordForm.value = { currentPassword: '', newPassword: '', confirmNewPassword: '' }
+  } catch (err) {
+    console.error(err)
+    error.value = 'Error al cambiar la contraseña. Asegúrate de que la contraseña actual sea correcta.'
   }
 }
-
-const submitProfile = async () => {
-  const userToken = sessionStorage.getItem('user-token');
-  if (!userToken) {
-    alert('User token is not available');
-    return;
-  }
-
-  try {
-    const docRef = doc(db, "publishers", userToken);
-    await updateDoc(docRef, {
-      ciudad: profileForm.ciudad,
-      createdAt: profileForm.createdAt,
-      departamento: profileForm.departamento,
-      direccion: profileForm.direccion,
-      email: profileForm.email,
-      paginaWeb: profileForm.paginaWeb,
-      razonSocial: profileForm.razonSocial,
-      ruc: profileForm.ruc,
-      telefono: profileForm.telefono
-    });
-    alert('Profile updated successfully');
-  } catch (error) {
-    console.error("Error updating profile:", error);
-    alert(`There was an error updating the profile: ${error.message}`);
-  }
-}
-
-onMounted(() => {
-  fetchProfileData();
-});
 </script>
 
 <template>
   <LayoutAuthenticated>
     <SectionMain>
       <div class="flex justify-center items-center min-h-screen">
-        <CardBox is-form @submit.prevent="submitProfile" class="w-full max-w-lg mx-auto">
-          <FormField label="Ciudad" help="Required. Your city">
+        <CardBox is-form @submit.prevent="changePassword" class="w-full max-w-lg mx-auto">
+          <h2 class="text-2xl font-bold mb-6 text-center">Cambiar Contraseña</h2>
+
+          <FormField label="Contraseña Actual" help="Ingresa tu contraseña actual">
             <FormControl
-              v-model="profileForm.ciudad"
-              :icon="mdiAsterisk"
-              name="ciudad"
-              type="text"
+              v-model="passwordForm.currentPassword"
+              :icon="passwordVisible.current ? mdiEyeOutline : mdiEyeOffOutline"
+              :type="passwordVisible.current ? 'text' : 'password'"
+              name="currentPassword"
               required
+              @icon-click="togglePasswordVisibility('current')"
             />
           </FormField>
 
-          <FormField label="Departamento" help="Required. Your department">
+          <FormField label="Nueva Contraseña" help="Ingresa tu nueva contraseña">
             <FormControl
-              v-model="profileForm.departamento"
-              :icon="mdiAsterisk"
-              name="departamento"
-              type="text"
+              v-model="passwordForm.newPassword"
+              :icon="passwordVisible.new ? mdiEyeOutline : mdiEyeOffOutline"
+              :type="passwordVisible.new ? 'text' : 'password'"
+              name="newPassword"
               required
+              @icon-click="togglePasswordVisibility('new')"
             />
           </FormField>
 
-          <FormField label="Direccion" help="Required. Your address">
+          <FormField label="Confirmar Nueva Contraseña" help="Repite tu nueva contraseña">
             <FormControl
-              v-model="profileForm.direccion"
-              :icon="mdiAsterisk"
-              name="direccion"
-              type="text"
+              v-model="passwordForm.confirmNewPassword"
+              :icon="passwordVisible.confirm ? mdiEyeOutline : mdiEyeOffOutline"
+              :type="passwordVisible.confirm ? 'text' : 'password'"
+              name="confirmNewPassword"
               required
+              @icon-click="togglePasswordVisibility('confirm')"
             />
           </FormField>
 
-          <FormField label="Email" help="Required. Your email">
-            <FormControl
-              v-model="profileForm.email"
-              :icon="mdiAsterisk"
-              name="email"
-              type="email"
-              required
-            />
-          </FormField>
-
-          <FormField label="Pagina Web" help="Optional. Your website">
-            <FormControl
-              v-model="profileForm.paginaWeb"
-              name="paginaWeb"
-              type="url"
-            />
-          </FormField>
-
-          <FormField label="Razon Social" help="Required. Your business name">
-            <FormControl
-              v-model="profileForm.razonSocial"
-              :icon="mdiAsterisk"
-              name="razonSocial"
-              type="text"
-              required
-            />
-          </FormField>
-
-          <FormField label="RUC" help="Required. Your RUC number">
-            <FormControl
-              v-model="profileForm.ruc"
-              :icon="mdiAsterisk"
-              name="ruc"
-              type="text"
-              required
-            />
-          </FormField>
-
-          <FormField label="Telefono" help="Required. Your phone number">
-            <FormControl
-              v-model="profileForm.telefono"
-              :icon="mdiAsterisk"
-              name="telefono"
-              type="tel"
-              required
-            />
-          </FormField>
+          <div v-if="error" class="text-red-500 mt-4">{{ error }}</div>
+          <div v-if="success" class="text-green-500 mt-4">{{ success }}</div>
 
           <template #footer>
             <BaseButtons>
-              <BaseButton type="submit" color="info" label="Submit" />
-              <BaseButton color="info" label="Cancel" outline />
+              <BaseButton type="submit" color="info" label="Cambiar Contraseña" />
+              <BaseButton color="info" label="Cancelar" outline />
             </BaseButtons>
           </template>
         </CardBox>

@@ -52,8 +52,6 @@ export const uploadEpubFile = async (file) => {
   }
 };
 
-// ... (resto del código existente)
-
 // Fetch all book requests
 export const fetchRequests = async () => {
   try {

@@ -34,7 +34,11 @@
                 @change="applyFilters"
               >
                 <option value="">Todas las categorías</option>
-                <option v-for="category in categories" :key="category.id" :value="category.id">
+                <option
+                  v-for="category in categories"
+                  :key="category.id"
+                  :value="category.id"
+                >
                   {{ category.name }}
                 </option>
               </select>
@@ -56,7 +60,11 @@
               <div class="flex items-center">
                 <span class="mr-2">Mostrar archivadas</span>
                 <label class="switch">
-                  <input type="checkbox" v-model="filters.showArchived" @change="applyFilters">
+                  <input
+                    type="checkbox"
+                    v-model="filters.showArchived"
+                    @change="applyFilters"
+                  />
                   <span class="slider round"></span>
                 </label>
               </div>
@@ -66,19 +74,44 @@
           <table class="table-auto w-full">
             <thead>
               <tr>
-                <th class="px-4 py-2 cursor-pointer" @click="sortTable('title')">Título</th>
-                <th class="px-4 py-2 cursor-pointer" @click="sortTable('author')">Autor</th>
-                <th class="px-4 py-2 cursor-pointer" @click="sortTable('categoryName')">Categoría</th>
-                <th class="px-4 py-2 cursor-pointer" @click="sortTable('status')">Estado</th>
-                <th class="px-4 py-2 cursor-pointer" @click="sortTable('createdAt')">Fecha</th>
+                <th
+                  class="px-4 py-2 cursor-pointer"
+                  @click="sortTable('title')"
+                >
+                  Título
+                </th>
+                <th
+                  class="px-4 py-2 cursor-pointer"
+                  @click="sortTable('author')"
+                >
+                  Autor
+                </th>
+                <th
+                  class="px-4 py-2 cursor-pointer"
+                  @click="sortTable('categoryName')"
+                >
+                  Categoría
+                </th>
+                <th
+                  class="px-4 py-2 cursor-pointer"
+                  @click="sortTable('status')"
+                >
+                  Estado
+                </th>
+                <th
+                  class="px-4 py-2 cursor-pointer"
+                  @click="sortTable('createdAt')"
+                >
+                  Fecha
+                </th>
                 <th class="px-4 py-2">Hora</th>
                 <th class="px-4 py-2">Acciones</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="request in paginatedRequests" :key="request.id">
-                <td class="border px-4 py-2">{{ request.title }}</td>
-                <td class="border px-4 py-2">{{ request.author }}</td>
+    <td class="border px-4 py-2">{{ request.title }}</td>
+    <td class="border px-4 py-2">{{ request.authorName || "Cargando..." }}</td>
                 <td class="border px-4 py-2">
                   {{ request.categoryName || "Cargando..." }}
                 </td>
@@ -88,10 +121,18 @@
                   }}</span>
                 </td>
                 <td class="border px-4 py-2">
-                  {{ new Date(request.createdAt.seconds * 1000).toLocaleDateString() }}
+                  {{
+                    new Date(
+                      request.createdAt.seconds * 1000
+                    ).toLocaleDateString()
+                  }}
                 </td>
                 <td class="border px-4 py-2">
-                  {{ new Date(request.createdAt.seconds * 1000).toLocaleTimeString() }}
+                  {{
+                    new Date(
+                      request.createdAt.seconds * 1000
+                    ).toLocaleTimeString()
+                  }}
                 </td>
                 <td class="border px-4 py-2 flex justify-center space-x-2">
                   <BaseButton
@@ -149,8 +190,16 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import { fetchRequests, fetchApprovedRequests, fetchDeclinedRequests, fetchRequestById, updateRequestStatus } from "@/api/firebase";
-import { fetchCategories, fetchCategoryById } from "@/api/woocommerce";
+import {
+  fetchRequests,
+  fetchApprovedRequests,
+  fetchDeclinedRequests,
+  fetchRequestById,
+  updateRequestStatus,
+} from "@/api/firebase";
+import { fetchCategories, fetchCategoryById, fetchAuthorById } from "@/api/woocommerce";
+
+
 
 import SectionMain from "@/components/SectionMain.vue";
 import LayoutAuthenticated from "@/layouts/LayoutAuthenticated.vue";
@@ -177,6 +226,21 @@ const loading = ref(true);
 const error = ref(null);
 const loadingStates = ref({});
 
+
+
+const getAuthorName = async (authorId) => {
+  if (!isNaN(authorId)) {
+    try {
+      const author = await fetchAuthorById(authorId);
+      return author.name;
+    } catch (error) {
+      console.error(`Error fetching author name for ID ${authorId}:`, error);
+      return "Autor desconocido";
+    }
+  }
+  return authorId; // Si no es un número, devolvemos el valor original
+};
+
 const filters = ref({
   search: "",
   category: "",
@@ -186,29 +250,31 @@ const filters = ref({
 
 const currentPage = ref(1);
 const itemsPerPage = 10;
-const sortKey = ref('');
+const sortKey = ref("");
 const sortOrder = ref(1);
 
 const fetchRequestsData = async () => {
   loading.value = true;
   error.value = null;
   try {
-    const [pendingRequests, approvedRequests, declinedRequests] = await Promise.all([
-      fetchRequests(),
-      fetchApprovedRequests(),
-      fetchDeclinedRequests()
-    ]);
+    const [pendingRequests, approvedRequests, declinedRequests] =
+      await Promise.all([
+        fetchRequests(),
+        fetchApprovedRequests(),
+        fetchDeclinedRequests(),
+      ]);
 
     const processedRequests = [
-      ...pendingRequests.map(req => ({ ...req, status: "pending" })),
-      ...approvedRequests.map(req => ({ ...req, status: "approved" })),
-      ...declinedRequests.map(req => ({ ...req, status: "declined" }))
+      ...pendingRequests.map((req) => ({ ...req, status: "pending" })),
+      ...approvedRequests.map((req) => ({ ...req, status: "approved" })),
+      ...declinedRequests.map((req) => ({ ...req, status: "declined" })),
     ];
 
     requests.value = await Promise.all(
       processedRequests.map(async (request) => {
         const categoryName = await getCategoryName(request.category);
-        return { ...request, categoryName };
+        const authorName = await getAuthorName(request.author);
+        return { ...request, categoryName, authorName };
       })
     );
     console.log("Requests loaded:", requests.value);
@@ -233,7 +299,7 @@ const viewRequest = async (request) => {
   try {
     console.log(`Opening request`, request);
     const requestData = await fetchRequestById(request.id);
-    console.log('Request Data:', requestData);
+    console.log("Request Data:", requestData);
     router.push({ name: "requestDetailView", params: { id: request.id } });
   } catch (error) {
     console.error("Error viewing request:", error);
@@ -247,7 +313,7 @@ const toggleRequestStatus = async (request) => {
     const newStatus = request.status === "archived" ? "pending" : "archived";
     console.log(`Updating request ${request.id} status to ${newStatus}...`);
     await updateRequestStatus(request.id, newStatus);
-    await fetchRequestsData();
+    request.status = newStatus; // Actualiza el estado localmente
     console.log(`Request ${request.id} status updated to ${newStatus}.`);
   } catch (err) {
     console.error("Error updating request status:", err);
@@ -289,7 +355,7 @@ const filteredRequests = computed(() => {
   const sortedRequests = [...requests.value].sort((a, b) => {
     const aValue = a[sortKey.value];
     const bValue = b[sortKey.value];
-    
+
     if (aValue > bValue) return sortOrder.value;
     if (aValue < bValue) return -sortOrder.value;
     return 0;
@@ -338,6 +404,7 @@ onMounted(async () => {
   await fetchRequestsData();
   await fetchCategoriesData();
 });
+
 </script>
 
 <style scoped>
@@ -366,7 +433,7 @@ onMounted(async () => {
   right: 0;
   bottom: 0;
   background-color: #ccc;
-  transition: .4s;
+  transition: 0.4s;
 }
 
 .slider:before {
@@ -377,11 +444,11 @@ onMounted(async () => {
   left: 4px;
   bottom: 4px;
   background-color: white;
-  transition: .4s;
+  transition: 0.4s;
 }
 
 input:checked + .slider {
-  background-color: #2196F3;
+  background-color: #2196f3;
 }
 
 input:checked + .slider:before {

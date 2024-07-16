@@ -1,8 +1,18 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import { fetchRequests, fetchApprovedRequests, fetchDeclinedRequests, fetchRequestById, updateRequestStatus } from "@/api/firebase";
-import { fetchCategories, fetchCategoryById } from "@/api/woocommerce";
+import { 
+  fetchRequests, 
+  fetchApprovedRequests, 
+  fetchDeclinedRequests, 
+  fetchRequestById, 
+  updateRequestStatus 
+} from "@/api/firebase";
+import { 
+  fetchCategories, 
+  fetchCategoryById, 
+  fetchAuthorById 
+} from "@/api/woocommerce";
 
 import SectionMain from "@/components/SectionMain.vue";
 import LayoutAuthenticated from "@/layouts/LayoutAuthenticated.vue";
@@ -64,7 +74,8 @@ const fetchRequestsData = async () => {
         .filter(request => request.userEmail === userEmail || request.publisher === userName)
         .map(async (request) => {
           const categoryName = await getCategoryName(request.category);
-          return { ...request, categoryName };
+          const authorName = await getAuthorName(request.author);
+          return { ...request, categoryName, authorName };
         })
     );
     console.log("Requests loaded:", requests.value);
@@ -161,10 +172,8 @@ const filteredRequests = computed(() => {
   return sortedRequests.filter((request) => {
     const searchMatch =
       filters.value.search.toLowerCase() === "" ||
-      request.title
-        .toLowerCase()
-        .includes(filters.value.search.toLowerCase()) ||
-      request.author.toLowerCase().includes(filters.value.search.toLowerCase());
+      request.title.toLowerCase().includes(filters.value.search.toLowerCase()) ||
+      request.authorName.toLowerCase().includes(filters.value.search.toLowerCase());
     const categoryMatch =
       filters.value.category === "" ||
       request.category === filters.value.category;
@@ -197,6 +206,19 @@ const getCategoryName = async (categoryId) => {
   }
 };
 
+const getAuthorName = async (authorId) => {
+  if (!isNaN(authorId)) {
+    try {
+      const author = await fetchAuthorById(authorId);
+      return author.name;
+    } catch (error) {
+      console.error(`Error fetching author name for ID ${authorId}:`, error);
+      return "Autor desconocido";
+    }
+  }
+  return authorId; // Si no es un número, devolvemos el valor original
+};
+
 const goToNewRequest = () => {
   router.push({ name: 'requestForm' });
 };
@@ -205,7 +227,7 @@ onMounted(async () => {
   await fetchRequestsData();
   await fetchCategoriesData();
 });
-</script>
+</script>>
 
 <template>
   <SectionMain>
@@ -275,7 +297,7 @@ onMounted(async () => {
           <thead>
             <tr>
               <th class="px-4 py-2 cursor-pointer" @click="sortTable('title')">Título</th>
-              <th class="px-4 py-2 cursor-pointer" @click="sortTable('author')">Autor</th>
+              <th class="px-4 py-2 cursor-pointer" @click="sortTable('authorName')">Autor</th>
               <th class="px-4 py-2 cursor-pointer" @click="sortTable('categoryName')">Categoría</th>
               <th class="px-4 py-2 cursor-pointer" @click="sortTable('status')">Estado</th>
               <th class="px-4 py-2 cursor-pointer" @click="sortTable('createdAt')">Fecha</th>
@@ -286,7 +308,7 @@ onMounted(async () => {
           <tbody>
             <tr v-for="request in paginatedRequests" :key="request.id">
               <td class="border px-4 py-2">{{ request.title }}</td>
-              <td class="border px-4 py-2">{{ request.author }}</td>
+              <td class="border px-4 py-2">{{ request.authorName || "Cargando..." }}</td>
               <td class="border px-4 py-2">
                 {{ request.categoryName || "Cargando..." }}
               </td>
@@ -353,6 +375,7 @@ onMounted(async () => {
     </CardBox>
   </SectionMain>
 </template>
+
 
 <style scoped>
 .switch {

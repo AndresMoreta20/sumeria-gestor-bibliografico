@@ -12,7 +12,7 @@
           <span class="block">{{ errors.general }}</span>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <FormField label="Imagen de Portada" class="md:col-span-1">
+          <FormField label="Imagen de Portada *" class="md:col-span-1">
             <img
               v-if="imagePreview"
               :src="imagePreview"
@@ -25,7 +25,7 @@
               accept="image/*"
             />
           </FormField>
-          <FormField label="Archivo del Libro" class="md:col-span-1">
+          <FormField label="Archivo del Libro *" class="md:col-span-1">
             <FormFilePicker
               v-model="form.bookFile"
               @update:modelValue="handleBookFileChange"
@@ -39,16 +39,17 @@
         </div>
         <BaseDivider />
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <FormField label="Nombre" :class="{ 'text-red-500': errors.name }" class="md:col-span-1">
+          <FormField label="Nombre *" :class="{ 'text-red-500': errors.name }" class="md:col-span-1">
             <FormControl
               v-model="form.name"
               type="text"
               placeholder="Nombre del libro"
+              
               :class="{ 'border-red-500': errors.name }"
             />
             <p v-if="errors.name" class="text-red-500 text-sm mt-1">{{ errors.name }}</p>
           </FormField>
-          <FormField label="Precio" :class="{ 'text-red-500': errors.regular_price }" class="md:col-span-1">
+          <FormField label="Precio *" :class="{ 'text-red-500': errors.regular_price }" class="md:col-span-1">
             <div class="relative">
               <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-600">$</span>
               <FormControl
@@ -79,7 +80,7 @@
             <p v-if="errors.sale_price" class="text-red-500 text-sm mt-1">{{ errors.sale_price }}</p>
           </FormField>
           
-          <FormField label="Categoría" :class="{ 'text-red-500': errors.categories }" class="md:col-span-1">
+          <FormField label="Categoría *" :class="{ 'text-red-500': errors.categories }" class="md:col-span-1">
             <select
               v-model="form.categories[0]"
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -105,11 +106,13 @@
             />
             <p v-if="errors.categories" class="text-red-500 text-sm mt-1">{{ errors.categories }}</p>
           </FormField>
-          <FormField label="Autor" :class="{ 'text-red-500': errors.author }" class="md:col-span-1">
+          <FormField label="Autor *" :class="{ 'text-red-500': errors.author }" class="md:col-span-1">
             <select
               v-model="form.attributes[0].options[0]"
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              
               :class="{ 'border-red-500': errors.author }"
+              
               @change="handleAuthorChange"
             >
               <option value="">Seleccionar autor</option>
@@ -131,7 +134,7 @@
             />
             <p v-if="errors.author" class="text-red-500 text-sm mt-1">{{ errors.author }}</p>
           </FormField>
-          <FormField label="ISBN" :class="{ 'text-red-500': errors.isbn }" class="md:col-span-1">
+          <FormField label="ISBN *" :class="{ 'text-red-500': errors.isbn }" class="md:col-span-1">
             <FormControl
               v-model="form.attributes[1].options[0]"
               type="text"
@@ -191,26 +194,27 @@
             <p v-if="errors.language" class="text-red-500 text-sm mt-1">{{ errors.language }}</p>
           </FormField>
         </div>
-        <FormField label="Descripción corta" :class="{ 'text-red-500': errors.short_description }" class="mt-6 md:col-span-3">
-          <FormControl
-            v-model="form.short_description"
-            type="textarea"
-            placeholder="Descripción corta del libro"
-            :class="{ 'border-red-500': errors.short_description }"
-            rows="3"
-          />
-          <p v-if="errors.short_description" class="text-red-500 text-sm mt-1">{{ errors.short_description }}</p>
-        </FormField>
-        <FormField label="Descripción" :class="{ 'text-red-500': errors.description }" class="mt-6 md:col-span-3">
-          <FormControl
-            v-model="form.description"
-            type="textarea"
-            placeholder="Descripción completa del libro"
-            :class="{ 'border-red-500': errors.description }"
-            rows="6"
-          />
-          <p v-if="errors.description" class="text-red-500 text-sm mt-1">{{ errors.description }}</p>
-        </FormField>
+        <FormField label="Descripción corta *" :class="{ 'text-red-500': errors.short_description }" class="mt-6 md:col-span-3">
+  <FormControl
+    v-model="shortDescriptionWithoutHtml"
+    type="textarea"
+    placeholder="Descripción corta del libro"
+    :class="{ 'border-red-500': errors.short_description }"
+    rows="3"
+  />
+  <p v-if="errors.short_description" class="text-red-500 text-sm mt-1">{{ errors.short_description }}</p>
+</FormField>
+
+<FormField label="Descripción *" :class="{ 'text-red-500': errors.description }" class="mt-6 md:col-span-3">
+  <FormControl
+    v-model="descriptionWithoutHtml"
+    type="textarea"
+    placeholder="Descripción completa del libro"
+    :class="{ 'border-red-500': errors.description }"
+    rows="6"
+  />
+  <p v-if="errors.description" class="text-red-500 text-sm mt-1">{{ errors.description }}</p>
+</FormField>
         <template #footer>
           <BaseButtons>
             <BaseButton
@@ -243,7 +247,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { mdiBookOutline } from '@mdi/js';
+import { mdiBookOutline, mdiAsterisk } from '@mdi/js';
 import SectionMain from '@/components/SectionMain.vue';
 import CardBox from '@/components/CardBox.vue';
 import FormField from '@/components/FormField.vue';
@@ -273,6 +277,26 @@ import { uploadCoverImage, uploadEpubFile } from "@/api/firebase";
 const route = useRoute();
 const router = useRouter();
 const bookData = route.query.bookData ? JSON.parse(route.query.bookData) : null;
+
+const stripHtml = (html) => {
+  let tmp = document.createElement("DIV");
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || "";
+}
+
+const descriptionWithoutHtml = computed({
+  get: () => stripHtml(form.description),
+  set: (value) => {
+    form.description = value;
+  }
+});
+
+const shortDescriptionWithoutHtml = computed({
+  get: () => stripHtml(form.short_description),
+  set: (value) => {
+    form.short_description = value;
+  }
+});
 
 const form = reactive({
   name: bookData ? bookData.name : "",

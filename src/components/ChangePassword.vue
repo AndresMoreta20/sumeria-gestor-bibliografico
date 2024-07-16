@@ -1,13 +1,66 @@
 <template>
-    <div>
-      <h2>Cambiar contraseña</h2>
+  <SectionMain>
+    <SectionTitleLineWithButton :icon="mdiLock" title="Cambiar Contraseña" main />
+    
+    <CardBox class="mb-6">
       <form @submit.prevent="changePassword">
-        <input v-model="newPassword" type="password" placeholder="Nueva contraseña" required>
-        <button type="submit">Cambiar contraseña</button>
+        <FormField label="Contraseña Actuals *" help="Campo obligatorio">
+          <FormControl
+            v-model="currentPassword"
+            type="password"
+            placeholder="Ingrese su contraseña actual"
+            :icon="mdiLock"
+            required
+          />
+          <p v-if="errors.currentPassword" class="mt-1 text-red-500 text-sm">
+            {{ errors.currentPassword }}
+          </p>
+        </FormField>
+        <FormField label="Nueva Contraseña *" help="Campo obligatorio">
+          <FormControl
+            v-model="newPassword"
+            type="password"
+            placeholder="Ingrese su nueva contraseña"
+            :icon="mdiLock"
+            required
+          />
+          <p v-if="errors.newPassword" class="mt-1 text-red-500 text-sm">
+            {{ errors.newPassword }}
+          </p>
+        </FormField>
+        <FormField label="Confirmar Nueva Contraseña *" help="Campo obligatorio">
+          <FormControl
+            v-model="confirmPassword"
+            type="password"
+            placeholder="Confirme su nueva contraseña"
+            :icon="mdiLock"
+            required
+          />
+          <p v-if="errors.confirmPassword" class="mt-1 text-red-500 text-sm">
+            {{ errors.confirmPassword }}
+          </p>
+        </FormField>
       </form>
-    </div>
-  </template>
-  
+      
+      <template #footer>
+        <BaseButtons>
+          <BaseButton
+            type="button"
+            color="info"
+            :icon="mdiCheck"
+            label="Cambiar Contraseña"
+            :disabled="isSubmitting"
+            @click="changePassword"
+          />
+        </BaseButtons>
+      </template>
+    </CardBox>
+
+    <NotificationBar v-if="notification.visible" :color="notification.color" :icon="notification.icon">
+      {{ notification.message }}
+    </NotificationBar>
+  </SectionMain>
+</template>
   <script setup>
   import { ref } from 'vue';
   import { getAuth, updatePassword } from "firebase/auth";

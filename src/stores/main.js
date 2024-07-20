@@ -9,6 +9,7 @@ export const useMainStore = defineStore("main", () => {
   const userEmail = ref(sessionStorage.getItem("user-email") || "");
   const userToken = ref(sessionStorage.getItem("user-token") || "");
   const userRole = ref(sessionStorage.getItem("user-role") || "");
+  const isAuthenticated = ref(!!sessionStorage.getItem("user-token"));
 
   const userAvatar = computed(() => {
     return `https://api.dicebear.com/7.x/avataaars/svg?seed=${userEmail.value.replace(
@@ -38,6 +39,7 @@ export const useMainStore = defineStore("main", () => {
       userRole.value = payload.role;
       sessionStorage.setItem("user-role", payload.role);
     }
+    isAuthenticated.value = true;
   }
 
   function resetUser() {
@@ -45,6 +47,7 @@ export const useMainStore = defineStore("main", () => {
     userEmail.value = "";
     userToken.value = "";
     userRole.value = "";
+    isAuthenticated.value = false;
     sessionStorage.clear();
   }
 
@@ -63,8 +66,6 @@ export const useMainStore = defineStore("main", () => {
       throw new Error(error.response?.data?.message || "Login failed");
     }
   }
-
-  const isAuthenticated = computed(() => !!userToken.value);
 
   async function fetchSampleClients() {
     // Sample fetch implementation

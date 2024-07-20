@@ -1,157 +1,570 @@
+<template>
+  <LayoutAuthenticated>
+    <SectionMain>
+      <SectionTitleLineWithButton
+        :icon="mdiBookOutline"
+        :title="route.query.bookData ? 'Editar Libro' : 'Nuevo Libro'"
+        main
+      />
+      <CardBox form @submit.prevent="saveBook" class="max-w-5xl mx-auto">
+        <div v-if="errors.general" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+          <strong class="font-bold">Error!</strong>
+          <span class="block">{{ errors.general }}</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <FormField label="Imagen de Portada *" class="md:col-span-1">
+            <img
+              v-if="imagePreview"
+              :src="imagePreview"
+              alt="Vista previa de portada"
+              class="max-w-full h-40 object-contain mb-2"
+            />
+            <FormFilePicker
+              v-model="form.imageFile"
+              @update:modelValue="handleImageChange"
+              accept="image/*"
+            />
+          </FormField>
+          <FormField label="Archivo del Libro *" class="md:col-span-1">
+            <FormFilePicker
+              v-model="form.bookFile"
+              @update:modelValue="handleBookFileChange"
+              accept=".pdf,.epub,.mobi"
+            />
+            <p class="text-sm text-gray-500 mt-1">Sube el archivo del libro (PDF, EPUB, MOBI)</p>
+            <a v-if="form.downloads[0]?.file" :href="form.downloads[0].file" target="_blank" class="text-blue-500 underline mt-2 inline-block">
+              Descargar archivo actual
+            </a>
+          </FormField>
+        </div>
+        <BaseDivider />
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <FormField label="Nombre *" :class="{ 'text-red-500': errors.name }" class="md:col-span-1">
+            <FormControl
+              v-model="form.name"
+              type="text"
+              placeholder="Nombre del libro"
+              
+              :class="{ 'border-red-500': errors.name }"
+            />
+            <p v-if="errors.name" class="text-red-500 text-sm mt-1">{{ errors.name }}</p>
+          </FormField>
+          <FormField label="Precio *" :class="{ 'text-red-500': errors.regular_price }" class="md:col-span-1">
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-600">$</span>
+              <FormControl
+                v-model="form.regular_price"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="Precio del libro"
+                class="pl-7"
+                :class="{ 'border-red-500': errors.regular_price }"
+              />
+            </div>
+            <p v-if="errors.regular_price" class="text-red-500 text-sm mt-1">{{ errors.regular_price }}</p>
+          </FormField>
+          <FormField label="Precio de oferta" :class="{ 'text-red-500': errors.sale_price }" class="md:col-span-1">
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-600">$</span>
+              <FormControl
+                v-model="form.sale_price"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="Precio de oferta"
+                class="pl-7"
+                :class="{ 'border-red-500': errors.sale_price }"
+              />
+            </div>
+            <p v-if="errors.sale_price" class="text-red-500 text-sm mt-1">{{ errors.sale_price }}</p>
+          </FormField>
+          
+          <FormField label="Categoría *" :class="{ 'text-red-500': errors.categories }" class="md:col-span-1">
+            <select
+              v-model="form.categories[0]"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              :class="{ 'border-red-500': errors.categories }"
+              @change="handleCategoryChange"
+            >
+              <option value="">Seleccionar categoría</option>
+              <option
+                v-for="category in categories"
+                :key="category.id"
+                :value="category.id"
+              >
+                {{ category.name }}
+              </option>
+              <option value="other">Otra</option>
+            </select>
+            <input
+              v-if="showNewCategoryInput"
+              v-model="newCategory"
+              type="text"
+              placeholder="Nueva categoría"
+              class="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <p v-if="errors.categories" class="text-red-500 text-sm mt-1">{{ errors.categories }}</p>
+          </FormField>
+          <FormField label="Autor *" :class="{ 'text-red-500': errors.author }" class="md:col-span-1">
+            <select
+              v-model="form.attributes[0].options[0]"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              
+              :class="{ 'border-red-500': errors.author }"
+              
+              @change="handleAuthorChange"
+            >
+              <option value="">Seleccionar autor</option>
+              <option
+                v-for="author in authors"
+                :key="author.id"
+                :value="author.name"
+              >
+                {{ author.name }}
+              </option>
+              <option value="other">Otro</option>
+            </select>
+            <input
+              v-if="showNewAuthorInput"
+              v-model="newAuthor"
+              type="text"
+              placeholder="Nuevo autor"
+              class="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <p v-if="errors.author" class="text-red-500 text-sm mt-1">{{ errors.author }}</p>
+          </FormField>
+          <FormField label="ISBN *" :class="{ 'text-red-500': errors.isbn }" class="md:col-span-1">
+            <FormControl
+              v-model="form.attributes[1].options[0]"
+              type="text"
+              placeholder="ISBN del libro"
+              :class="{ 'border-red-500': errors.isbn }"
+            />
+            <p v-if="errors.isbn" class="text-red-500 text-sm mt-1">{{ errors.isbn }}</p>
+          </FormField>
+          <FormField label="Editorial" class="md:col-span-1">
+            <select
+              v-model="form.attributes[2].options[0]"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              @change="handlePublisherChange"
+            >
+              <option value="">Seleccionar editorial</option>
+              <option
+                v-for="publisher in publishers"
+                :key="publisher.id"
+                :value="publisher.name"
+              >
+                {{ publisher.name }}
+              </option>
+              <option value="other">Otra</option>
+            </select>
+            <input
+              v-if="showNewPublisherInput"
+              v-model="newPublisher"
+              type="text"
+              placeholder="Nueva editorial"
+              class="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </FormField>
+          <FormField label="Idioma" :class="{ 'text-red-500': errors.language }" class="md:col-span-1">
+            <select
+              v-model="form.attributes[4].options[0]"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              :class="{ 'border-red-500': errors.language }"
+              @change="handleLanguageChange"
+            >
+              <option value="">Seleccionar idioma</option>
+              <option
+                v-for="language in languages"
+                :key="language.id"
+                :value="language.name"
+              >
+                {{ language.name }}
+              </option>
+              <option value="other">Otro</option>
+            </select>
+            <input
+              v-if="showNewLanguageInput"
+              v-model="newLanguage"
+              type="text"
+              placeholder="Nuevo idioma"
+              class="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <p v-if="errors.language" class="text-red-500 text-sm mt-1">{{ errors.language }}</p>
+          </FormField>
+        </div>
+        <FormField label="Descripción corta *" :class="{ 'text-red-500': errors.short_description }" class="mt-6 md:col-span-3">
+  <FormControl
+    v-model="shortDescriptionWithoutHtml"
+    type="textarea"
+    placeholder="Descripción corta del libro"
+    :class="{ 'border-red-500': errors.short_description }"
+    rows="3"
+  />
+  <p v-if="errors.short_description" class="text-red-500 text-sm mt-1">{{ errors.short_description }}</p>
+</FormField>
+
+<FormField label="Descripción *" :class="{ 'text-red-500': errors.description }" class="mt-6 md:col-span-3">
+  <FormControl
+    v-model="descriptionWithoutHtml"
+    type="textarea"
+    placeholder="Descripción completa del libro"
+    :class="{ 'border-red-500': errors.description }"
+    rows="6"
+  />
+  <p v-if="errors.description" class="text-red-500 text-sm mt-1">{{ errors.description }}</p>
+</FormField>
+        <template #footer>
+          <BaseButtons>
+            <BaseButton
+              @click="saveBook"
+              color="success"
+              :label="buttonLabel"
+              :disabled="loading"
+            />
+            <BaseButton
+              v-if="loading"
+              color="info"
+              label="Guardando..."
+              disabled
+            />
+            <BaseButton
+              @click="cancel"
+              color="danger"
+              label="Cancelar"
+              outline
+              :disabled="loading"
+            />
+          </BaseButtons>
+        </template>
+      </CardBox>
+    </SectionMain>
+  </LayoutAuthenticated>
+</template>
+
+
 <script setup>
-import { ref } from "vue";
-import { useRoute, useRouter } from "vue-router";
-import axios from "axios";
+import { ref, reactive, computed, onMounted, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { mdiBookOutline, mdiAsterisk } from '@mdi/js';
+import SectionMain from '@/components/SectionMain.vue';
+import CardBox from '@/components/CardBox.vue';
+import FormField from '@/components/FormField.vue';
+import FormControl from '@/components/FormControl.vue';
+import FormFilePicker from '@/components/FormFilePicker.vue';
+import BaseDivider from '@/components/BaseDivider.vue';
+import BaseButton from '@/components/BaseButton.vue';
+import BaseButtons from '@/components/BaseButtons.vue';
+import SectionTitleLineWithButton from '@/components/SectionTitleLineWithButton.vue';
+import LayoutAuthenticated from '@/layouts/LayoutAuthenticated.vue';
+import {
+  fetchCategories,
+  fetchAuthors,
+  fetchLanguages,
+  fetchPublishers,
+  updateProductById,
+  uploadProduct,
+  createCategory,
+  createAuthor,
+  createPublisher,
+  createLanguage,
+  checkSkuExists,
+  fetchCategoryByName
+} from "@/api/woocommerce";
+import { uploadCoverImage, uploadEpubFile } from "@/api/firebase";
 
 const route = useRoute();
 const router = useRouter();
 const bookData = route.query.bookData ? JSON.parse(route.query.bookData) : null;
 
-const form = ref({
-  name: bookData ? bookData.name : '',
-  price: bookData ? bookData.price : '',
-  stock_quantity: bookData ? bookData.stock_quantity : '',
-  description: bookData ? bookData.description : '',
-  categories: bookData ? bookData.categories[0]?.id : '',
-  format: bookData ? bookData.attributes.find(attr => attr.name === 'Formato')?.options[0] : '',
-  author: bookData ? bookData.attributes.find(attr => attr.name === 'Autor')?.options[0] : '',
-  isbn: bookData ? bookData.attributes.find(attr => attr.name === 'ISBN')?.options[0] : '',
-  editorial: bookData ? bookData.attributes.find(attr => attr.name === 'Editorial')?.options[0] : '',
-  estado: bookData ? bookData.attributes.find(attr => attr.name === 'Estado')?.options[0] : '',
-  image: bookData ? bookData.images[0]?.src : '',
-  download_link: bookData ? bookData.downloads[0]?.file : '',
+const stripHtml = (html) => {
+  let tmp = document.createElement("DIV");
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || "";
+}
+
+const descriptionWithoutHtml = computed({
+  get: () => stripHtml(form.description),
+  set: (value) => {
+    form.description = value;
+  }
 });
 
-const consumerKey = import.meta.env.VITE_APP_CONSUMER_KEY;
-const consumerSecret = import.meta.env.VITE_APP_CONSUMER_SECRET;
+const shortDescriptionWithoutHtml = computed({
+  get: () => stripHtml(form.short_description),
+  set: (value) => {
+    form.short_description = value;
+  }
+});
+
+const form = reactive({
+  name: bookData ? bookData.name : "",
+  type: "simple",
+  regular_price: bookData ? bookData.regular_price : "",
+  sale_price: bookData ? bookData.sale_price : "",
+  stock_quantity: bookData ? bookData.stock_quantity : 100,
+  manage_stock: true,
+  description: bookData ? bookData.description : "",
+  short_description: bookData ? bookData.short_description : "",
+  categories: bookData ? bookData.categories.map(c => c.id) : [],
+  images: bookData ? bookData.images : [],
+  attributes: [
+    {
+      id: 1,
+      name: "Autor",
+      options: bookData ? [bookData.attributes.find(attr => attr.name === "Autor")?.options[0]] : [""]
+    },
+    {
+      id: 3,
+      name: "ISBN",
+      options: bookData ? [bookData.attributes.find(attr => attr.name === "ISBN")?.options[0]] : [""]
+    },
+    {
+      id: 4,
+      name: "Editorial",
+      options: bookData ? [bookData.attributes.find(attr => attr.name === "Editorial")?.options[0]] : [""]
+    },
+    {
+      id: 2,
+      name: "Formato",
+      options: ["E-book"]
+    },
+    {
+      id: 7,
+      name: "Idioma",
+      options: bookData ? [bookData.attributes.find(attr => attr.name === "Idioma")?.options[0]] : [""]
+    },
+    {
+      id: 6,
+      name: "Encuadernación",
+      options: ["Tapa blanda"]
+    },
+    {
+      id: 5,
+      name: "Estado",
+      options: ["Nuevo"]
+    }
+  ],
+  downloads: bookData ? bookData.downloads : [],
+  imageFile: null,
+  bookFile: null,
+});
 
 const loading = ref(false);
-const error = ref(null);
+const errors = ref({});
+const imagePreview = ref(bookData ? bookData.images[0]?.src : null);
+const categories = ref([]);
+const authors = ref([]);
+const languages = ref([]);
+const publishers = ref([]);
+
+const showNewCategoryInput = ref(false);
+const newCategory = ref('');
+const showNewAuthorInput = ref(false);
+const newAuthor = ref('');
+const showNewPublisherInput = ref(false);
+const newPublisher = ref('');
+const showNewLanguageInput = ref(false);
+const newLanguage = ref('');
+
+onMounted(async () => {
+  try {
+    const [categoriesData, authorsData, languagesData, publishersData] = await Promise.all([
+      fetchCategories(),
+      fetchAuthors(),
+      fetchLanguages(),
+      fetchPublishers(),
+    ]);
+    categories.value = categoriesData.data;
+    authors.value = authorsData.data;
+    languages.value = languagesData.data;
+    publishers.value = publishersData;
+  } catch (err) {
+    console.error("Error fetching data:", err);
+  }
+});
+
+const handleCategoryChange = (event) => {
+  if (event.target.value === 'other') {
+    showNewCategoryInput.value = true;
+  } else {
+    showNewCategoryInput.value = false;
+  }
+};
+
+const handleAuthorChange = (event) => {
+  if (event.target.value === 'other') {
+    showNewAuthorInput.value = true;
+  } else {
+    showNewAuthorInput.value = false;
+  }
+};
+
+const handlePublisherChange = (event) => {
+  if (event.target.value === 'other') {
+    showNewPublisherInput.value = true;
+  } else {
+    showNewPublisherInput.value = false;
+  }
+};
+
+const handleLanguageChange = (event) => {
+  if (event.target.value === 'other') {
+    showNewLanguageInput.value = true;
+  } else {
+    showNewLanguageInput.value = false;
+  }
+};
+
+const handleImageChange = (file) => {
+  form.imageFile = file;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    imagePreview.value = e.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
+const handleBookFileChange = (file) => {
+  form.bookFile = file;
+};
+
+const generateUniqueSku = async (baseSku) => {
+  let sku = baseSku;
+  let suffix = 1;
+  while (await checkSkuExists(sku)) {
+    sku = `${baseSku}-${suffix}`;
+    suffix += 1;
+  }
+  return sku;
+};
+
+const getCategoryId = async (categoryName) => {
+  try {
+    let category = await fetchCategoryByName(categoryName);
+    if (!category) {
+      category = await createCategory(categoryName);
+    }
+    return category.id;
+  } catch (error) {
+    console.error('Error getting or creating category:', error);
+    throw error;
+  }
+};
 
 const saveBook = async () => {
+  if (!validateForm()) return;
+
   loading.value = true;
-  error.value = null;
+  errors.value = {};
 
   try {
-    const url = bookData
-      ? `https://cindyl23.sg-host.com/wp-json/wc/v3/products/${bookData.id}`
-      : 'https://cindyl23.sg-host.com/wp-json/wc/v3/products';
+    let imageUrl = form.images[0]?.src;
+    let downloadUrl = form.downloads[0]?.file;
 
-    const method = bookData ? 'put' : 'post';
+    if (form.imageFile) {
+      imageUrl = await uploadCoverImage(form.imageFile);
+    }
 
-    await axios({
-      method,
-      url,
-      auth: {
-        username: consumerKey,
-        password: consumerSecret,
-      },
-      data: {
-        name: form.value.name,
-        regular_price: form.value.price,
-        stock_quantity: form.value.stock_quantity,
-        description: form.value.description,
-        categories: [{ id: form.value.categories }],
-        images: [{ src: form.value.image }],
-        downloads: [{ file: form.value.download_link }],
-        attributes: [
-          { name: 'Formato', options: [form.value.format] },
-          { name: 'Autor', options: [form.value.author] },
-          { name: 'ISBN', options: [form.value.isbn] },
-          { name: 'Editorial', options: [form.value.editorial] },
-          { name: 'Estado', options: [form.value.estado] },
-        ],
-      },
-    });
+    if (form.bookFile) {
+      downloadUrl = await uploadEpubFile(form.bookFile);
+    }
 
-    alert('Libro guardado correctamente');
-    router.push('/books'); // Redirige a la lista de libros
+    // Generar SKU único
+    const baseSku = form.attributes[1].options[0] || `SKU${Date.now()}`;
+    const uniqueSku = await generateUniqueSku(baseSku);
+
+    // Manejar nuevas categorías, autores, editoriales e idiomas
+    if (showNewCategoryInput.value) {
+      const newCategoryId = await getCategoryId(newCategory.value);
+      form.categories = [newCategoryId];
+    }
+    if (showNewAuthorInput.value) {
+      await createAuthor(newAuthor.value);
+      form.attributes[0].options = [newAuthor.value];
+    }
+    if (showNewPublisherInput.value) {
+      await createPublisher(newPublisher.value);
+      form.attributes[2].options = [newPublisher.value];
+    }
+    if (showNewLanguageInput.value) {
+      await createLanguage(newLanguage.value);
+      form.attributes[4].options = [newLanguage.value];
+    }
+
+    const bookData = {
+      name: form.name,
+      type: "simple",
+      regular_price: form.regular_price.toString(),
+      sale_price: form.sale_price.toString(),
+      sku: uniqueSku,
+      stock_quantity: parseInt(form.stock_quantity),
+      manage_stock: true,
+      description: form.description,
+      short_description: form.short_description,
+      categories: form.categories.map(id => ({ id: parseInt(id) })),
+      images: [{ src: imageUrl }],
+      attributes: form.attributes.map(attr => ({
+        id: attr.id,
+        name: attr.name,
+        position: 0,
+        visible: true,
+        variation: false,
+        options: attr.options
+      })),
+      virtual: true,
+      downloadable: true,
+      downloads: [{ name: "Libro Digital", file: downloadUrl }]
+    };
+
+    console.log('Sending data to WooCommerce:', JSON.stringify(bookData, null, 2));
+
+    if (route.query.bookData) {
+      await updateProductById(JSON.parse(route.query.bookData).id, bookData);
+    } else {
+      await uploadProduct(bookData);
+    }
+
+    alert("Libro guardado correctamente");
+    router.push("/books");
   } catch (err) {
-    console.error('Error saving book:', err);
-    error.value = 'Hubo un problema al guardar el libro. Inténtalo de nuevo.';
+    console.error("Error saving book:", err);
+    errors.value.general = "Hubo un problema al guardar el libro. Inténtalo de nuevo.";
   } finally {
     loading.value = false;
   }
 };
+
+const cancel = () => {
+  router.push("/books");
+};
+
+const buttonLabel = computed(() =>
+  route.query.bookData ? "Actualizar Libro" : "Crear Libro"
+);
+
+const validateForm = () => {
+  errors.value = {};
+  if (!form.name) errors.value.name = "El nombre es requerido";
+  if (!form.regular_price) errors.value.regular_price = "El precio es requerido";
+  if (!form.stock_quantity) errors.value.stock_quantity = "La cantidad en stock es requerida";
+  if (!form.categories || form.categories.length === 0) errors.value.categories = "La categoría es requerida";
+  if (!form.attributes[0].options[0]) errors.value.author = "El autor es requerido";
+  if (!form.attributes[4].options[0]) errors.value.language = "El idioma es requerido";
+  if (!form.attributes[1].options[0]) errors.value.isbn = "El ISBN es requerido";
+  if (!form.short_description) errors.value.short_description = "La descripción corta es requerida";
+  if (!form.description) errors.value.description = "La descripción es requerida";
+  
+  if (parseFloat(form.sale_price) > parseFloat(form.regular_price)) {
+    errors.value.sale_price = "El precio de oferta no puede ser mayor al precio regular";
+  }
+
+  return Object.keys(errors.value).length === 0;
+};
+
+// Validación activa
+watch(form, () => {
+  validateForm();
+}, { deep: true });
 </script>
-
-<template>
-  <LayoutAuthenticated>
-
- 
-    <SectionMain>
-
- 
-  <div class="max-w-lg mx-auto p-4 bg-white shadow-md rounded-lg">
-    <nav class="mb-4">
-      <router-link to="/books" class="text-blue-500">Lista de Libros</router-link>
-      <span> / </span>
-      <span>{{ bookData ? 'Editar Libro' : 'Nuevo Libro' }}</span>
-    </nav>
-    <h2 class="text-2xl font-semibold mb-4">{{ bookData ? 'Editar Libro' : 'Nuevo Libro' }}</h2>
-    <form @submit.prevent="saveBook">
-      <div class="mb-4">
-        <label for="name" class="block text-gray-700">Nombre</label>
-        <input type="text" v-model="form.name" :placeholder="bookData?.name || ''" id="name" class="w-full p-2 border border-gray-300 rounded mt-1" required>
-      </div>
-      <div class="mb-4">
-        <label for="price" class="block text-gray-700">Precio</label>
-        <input type="number" v-model="form.price" :placeholder="bookData?.price || ''" id="price" class="w-full p-2 border border-gray-300 rounded mt-1" required>
-      </div>
-      <div class="mb-4">
-        <label for="stock_quantity" class="block text-gray-700">Cantidad en Stock</label>
-        <input type="number" v-model="form.stock_quantity" :placeholder="bookData?.stock_quantity || ''" id="stock_quantity" class="w-full p-2 border border-gray-300 rounded mt-1">
-      </div>
-      <div class="mb-4">
-        <label for="description" class="block text-gray-700">Descripción</label>
-        <textarea v-model="form.description" :placeholder="bookData?.description || ''" id="description" class="w-full p-2 border border-gray-300 rounded mt-1"></textarea>
-      </div>
-      <div class="mb-4">
-        <label for="categories" class="block text-gray-700">Categoría</label>
-        <input type="number" v-model="form.categories" :placeholder="bookData?.categories[0]?.id || ''" id="categories" class="w-full p-2 border border-gray-300 rounded mt-1">
-      </div>
-      <div class="mb-4">
-        <label for="format" class="block text-gray-700">Formato</label>
-        <input type="text" v-model="form.format" :placeholder="bookData?.attributes.find(attr => attr.name === 'Formato')?.options[0] || ''" id="format" class="w-full p-2 border border-gray-300 rounded mt-1">
-      </div>
-      <div class="mb-4">
-        <label for="author" class="block text-gray-700">Autor</label>
-        <input type="text" v-model="form.author" :placeholder="bookData?.attributes.find(attr => attr.name === 'Autor')?.options[0] || ''" id="author" class="w-full p-2 border border-gray-300 rounded mt-1">
-      </div>
-      <div class="mb-4">
-        <label for="isbn" class="block text-gray-700">ISBN</label>
-        <input type="text" v-model="form.isbn" :placeholder="bookData?.attributes.find(attr => attr.name === 'ISBN')?.options[0] || ''" id="isbn" class="w-full p-2 border border-gray-300 rounded mt-1">
-      </div>
-      <div class="mb-4">
-        <label for="editorial" class="block text-gray-700">Editorial</label>
-        <input type="text" v-model="form.editorial" :placeholder="bookData?.attributes.find(attr => attr.name === 'Editorial')?.options[0] || ''" id="editorial" class="w-full p-2 border border-gray-300 rounded mt-1">
-      </div>
-      <div class="mb-4">
-        <label for="estado" class="block text-gray-700">Estado</label>
-        <input type="text" v-model="form.estado" :placeholder="bookData?.attributes.find(attr => attr.name === 'Estado')?.options[0] || ''" id="estado" class="w-full p-2 border border-gray-300 rounded mt-1">
-      </div>
-      <div class="mb-4">
-        <label for="image" class="block text-gray-700">Imagen URL</label>
-        <input type="text" v-model="form.image" :placeholder="bookData?.images[0]?.src || ''" id="image" class="w-full p-2 border border-gray-300 rounded mt-1">
-      </div>
-      <div class="mb-4">
-        <label for="download_link" class="block text-gray-700">Enlace de Descarga</label>
-        <input type="text" v-model="form.download_link" :placeholder="bookData?.downloads[0]?.file || ''" id="download_link" class="w-full p-2 border border-gray-300 rounded mt-1">
-      </div>
-      <div class="mt-4">
-        <button type="submit" class="bg-blue-500 text-white py-2 px-4 rounded" :disabled="loading">
-          {{ loading ? 'Guardando...' : 'Guardar' }}
-        </button>
-      </div>
-      <div v-if="error" class="mt-4 text-red-500">{{ error }}</div>
-    </form>
-    <div v-if="form.image" class="mt-4">
-      <img :src="form.image" alt="Imagen del libro" class="w-full h-auto" />
-    </div>
-    <div v-if="form.download_link" class="mt-4">
-      <a :href="form.download_link" class="text-blue-500" download>Descargar Libro</a>
-    </div>
-  </div>
-</SectionMain>
-</LayoutAuthenticated>
-</template>

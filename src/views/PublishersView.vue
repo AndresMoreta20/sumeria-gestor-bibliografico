@@ -5,19 +5,17 @@ import DataTableView from '@/components/DataTableView.vue'
 import { mdiTableBorder } from '@mdi/js'
 import { fetchPublishers } from '@/api/woocommerce'
 
-const title = 'Publishers'
+const title = 'Editoriales'
 const columns = ['id', 'name']
 const columnLabels = { id: 'ID', name: 'Nombre' }
 const icon = mdiTableBorder
 const checkable = false
 
 const transformData = (data) => {
-  return data.map(item => {
-    return {
-      id: item.id,
-      name: item.name
-    }
-  })
+  return data.map(item => ({
+    id: item.id,
+    name: item.name
+  }))
 }
 
 const dataFetchFunction = async () => {
@@ -31,6 +29,7 @@ const dataFetchFunction = async () => {
 }
 </script>
 
+<!-- PublishersView.vue -->
 <template>
   <DataTableView
     :title="title"
@@ -39,6 +38,7 @@ const dataFetchFunction = async () => {
     :icon="icon"
     :checkable="checkable"
     :dataFetchFunction="dataFetchFunction"
-    new-route="PublisherForm" 
+    new-route="publisherForm"
+    :hideEditButton=true
   />
 </template>

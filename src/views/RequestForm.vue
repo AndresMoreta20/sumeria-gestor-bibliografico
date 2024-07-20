@@ -1,9 +1,371 @@
+<script setup>
+import { reactive, ref, watch, onMounted, computed } from "vue";
+import {
+  collection,
+  addDoc,
+  doc,
+  getDoc,
+  updateDoc,
+  getFirestore,
+} from "firebase/firestore";
+import { getAuth } from "firebase/auth";
+import {
+  getStorage,
+  ref as storageRef,
+  uploadBytes,
+  getDownloadURL,
+} from "firebase/storage";
+import SectionMain from "@/components/SectionMain.vue";
+import CardBox from "@/components/CardBox.vue";
+import FormField from "@/components/FormField.vue";
+import FormControl from "@/components/FormControl.vue";
+import FormFilePicker from "@/components/FormFilePicker.vue";
+import BaseDivider from "@/components/BaseDivider.vue";
+import BaseButton from "@/components/BaseButton.vue";
+import BaseButtons from "@/components/BaseButtons.vue";
+import SectionTitleLineWithButton from "@/components/SectionTitleLineWithButton.vue";
+import LayoutAuthenticated from "@/layouts/LayoutAuthenticated.vue";
+import { useRoute, useRouter } from "vue-router";
+import { mdiBookOutline } from "@mdi/js";
+import {
+  fetchCategories,
+  fetchAuthors,
+  fetchLanguages,
+} from "@/api/woocommerce";
+
+const route = useRoute();
+const router = useRouter();
+
+const categories = ref([]);
+const authors = ref([]);
+const languages = ref([]);
+const newEntry = ref({ category: "", author: "", language: "" });
+const showNewInput = reactive({
+  category: false,
+  author: false,
+  language: false,
+});
+const appealMode = ref(false);
+const requestId = ref(null);
+
+const form = reactive({
+  title: "",
+  format: "E-book",
+  file: null,
+  isbn: "",
+  category: "",
+  author: "",
+  publisher: "",
+  language: "",
+  regularPrice: "",
+  shortDescription: "",
+  description: "",
+  imageFile: null,
+  stockQuantity: 100,
+  sku: "",
+  comments: {},
+  coverUrl: "",
+  fileUrl: "",
+});
+
+const loading = ref(false);
+const imageLoading = ref(false);
+const fileLoading = ref(false);
+const errors = reactive({});
+const imagePreview = ref(null);
+const submitError = ref(null);
+
+const loadRequestData = async (id) => {
+  try {
+    const db = getFirestore();
+    const requestDoc = await getDoc(doc(db, "declinedBooks", id));
+    if (requestDoc.exists()) {
+      const data = requestDoc.data();
+      Object.assign(form, data);
+      form.comments = data.comments || {};
+      form.imageFile = null;
+      form.file = null;
+      imagePreview.value = data.coverUrl;
+    } else {
+      throw new Error("Request not found");
+    }
+  } catch (error) {
+    console.error("Error loading request data:", error);
+    submitError.value = "Error al cargar los datos de la solicitud: " + error.message;
+  }
+};
+
+const formatComments = (comments) => {
+  return Object.entries(comments)
+    .map(([field, comment]) => {
+      return `<strong>${field}:</strong> ${comment}`;
+    })
+    .join("<br>");
+};
+
+onMounted(async () => {
+  try {
+    const categoriesResponse = await fetchCategories();
+    categories.value = categoriesResponse.data;
+
+    const authorsResponse = await fetchAuthors();
+    authors.value = authorsResponse.data;
+
+    const languagesResponse = await fetchLanguages();
+    languages.value = languagesResponse.data;
+
+    form.publisher = sessionStorage.getItem("user-name") || "";
+
+    const { appeal, id } = route.query;
+    if (appeal === 'true' && id) {
+      appealMode.value = true;
+      requestId.value = id;
+      await loadRequestData(id);
+    }
+  } catch (error) {
+    console.error("Error fetching data:", error);
+    submitError.value = "Error al cargar los datos iniciales: " + error.message;
+  }
+});
+
+const handleSelectionChange = (event, type) => {
+  if (event.target.value === "new") {
+    showNewInput[type] = true;
+    form[type] = "";
+    errors[type] = "";
+  } else {
+    showNewInput[type] = false;
+    form[type] = event.target.value;
+  }
+};
+
+const addNewEntry = (type) => {
+  if (newEntry.value[type].trim() !== "") {
+    form[type] = newEntry.value[type].trim();
+    if (type === "category") {
+      categories.value.push({ id: form[type], name: form[type] });
+    } else if (type === "author") {
+      authors.value.push({ id: form[type], name: form[type] });
+    } else if (type === "language") {
+      languages.value.push({ id: form[type], name: form[type] });
+    }
+    showNewInput[type] = false;
+    newEntry.value[type] = "";
+  }
+};
+
+const generateSKU = () => {
+  const date = new Date();
+  const timestamp = date.getTime();
+  return `SKU${timestamp}`;
+};
+
+const validateISBN = (isbn) => {
+  isbn = isbn.replace(/[-\s]/g, "");
+  if (isbn.length !== 10 && isbn.length !== 13) return false;
+
+  let sum = 0;
+  if (isbn.length === 10) {
+    for (let i = 0; i < 9; i++) {
+      sum += (10 - i) * parseInt(isbn.charAt(i));
+    }
+    let checksum = 11 - (sum % 11);
+    if (checksum === 11) checksum = 0;
+    if (checksum === 10) checksum = "X";
+    return checksum.toString() === isbn.charAt(9).toUpperCase();
+  } else {
+    for (let i = 0; i < 12; i++) {
+      sum += (i % 2 === 0 ? 1 : 3) * parseInt(isbn.charAt(i));
+    }
+    let checksum = 10 - (sum % 10);
+    if (checksum === 10) checksum = 0;
+    return checksum.toString() === isbn.charAt(12);
+  }
+};
+
+const validateField = (field) => {
+  switch (field) {
+    case "title":
+      errors[field] = !form[field] ? "El título es requerido" : "";
+      break;
+    case "isbn":
+      errors[field] = !form[field]
+        ? "El ISBN es requerido"
+        : !validateISBN(form[field])
+        ? "El ISBN no es válido"
+        : "";
+      break;
+    case "author":
+      errors[field] =
+        !form[field] && !showNewInput.author ? "El autor es requerido" : "";
+      break;
+    case "publisher":
+      errors[field] = !form[field] ? "La editorial es requerida" : "";
+      break;
+    case "language":
+      errors[field] =
+        !form[field] && !showNewInput.language ? "El idioma es requerido" : "";
+      break;
+    case "regularPrice":
+      errors[field] =
+        !form[field] || isNaN(form[field]) || form[field] < 0
+          ? "Se requiere un precio regular válido y no negativo"
+          : "";
+      break;
+    case "shortDescription":
+      errors[field] = !form[field] ? "La descripción corta es requerida" : "";
+      break;
+    case "imageFile":
+      errors[field] = !form[field] && !form.coverUrl ? "La imagen de portada es requerida" : "";
+      break;
+    case "file":
+      errors[field] = !form[field] && !form.fileUrl
+        ? "El archivo EPUB es requerido"
+        : form[field] && !form[field].name.endsWith(".epub")
+        ? "El archivo debe estar en formato EPUB"
+        : "";
+      break;
+  }
+};
+
+Object.keys(form).forEach((field) => {
+  watch(
+    () => form[field],
+    () => validateField(field)
+  );
+});
+
+const validateForm = () => {
+  Object.keys(form).forEach(validateField);
+  return Object.values(errors).every((error) => error === "");
+};
+
+const uploadFile = async (file, path) => {
+  const storage = getStorage();
+  const fileRef = storageRef(storage, path);
+  await uploadBytes(fileRef, file);
+  return getDownloadURL(fileRef);
+};
+
+const handleImageChange = (file) => {
+  form.imageFile = file;
+  errors.imageFile = "";
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    imagePreview.value = e.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
+const handleFileChange = (file) => {
+  if (file.name.endsWith(".epub")) {
+    form.file = file;
+    errors.file = "";
+  } else {
+    errors.file = "El archivo debe estar en formato EPUB";
+    form.file = null;
+  }
+};
+
+const submit = async () => {
+  submitError.value = null;
+
+  if (!validateForm()) {
+    return;
+  }
+
+  loading.value = true;
+  try {
+    const auth = getAuth();
+    const user = auth.currentUser;
+
+    if (!user) {
+      submitError.value = "Debes estar conectado para enviar una solicitud";
+      return;
+    }
+
+    const sku = form.sku || generateSKU();
+
+    let coverUrl = form.coverUrl;
+    let fileUrl = form.fileUrl;
+
+    if (form.imageFile) {
+      imageLoading.value = true;
+      coverUrl = await uploadFile(
+        form.imageFile,
+        `covers/${sku}_${form.imageFile.name}`
+      );
+      imageLoading.value = false;
+    }
+
+    if (form.file) {
+      fileLoading.value = true;
+      fileUrl = await uploadFile(
+        form.file,
+        `books/${sku}_${form.file.name}`
+      );
+      fileLoading.value = false;
+    }
+
+    const requestData = {
+      title: form.title,
+      format: form.format,
+      isbn: form.isbn,
+      category: form.category,
+      author: form.author,
+      publisher: form.publisher,
+      language: form.language,
+      regularPrice: parseFloat(form.regularPrice),
+      shortDescription: form.shortDescription,
+      description: form.description,
+      coverUrl,
+      fileUrl,
+      stockQuantity: form.stockQuantity,
+      sku,
+      status: "pending",
+      userEmail: user.email,
+      createdAt: new Date(),
+    };
+
+    const db = getFirestore();
+    if (appealMode.value) {
+      // Actualizar el documento en declinedBooks
+      await updateDoc(doc(db, "declinedBooks", requestId.value), {
+        appealed: true
+      });
+
+      // Crear una nueva solicitud en bookRequests
+      const requestRef = collection(db, "bookRequests");
+      await addDoc(requestRef, requestData);
+
+      alert("Apelación enviada con éxito");
+    } else {
+      // Crear una nueva solicitud en bookRequests
+      const requestRef = collection(db, "bookRequests");
+      await addDoc(requestRef, requestData);
+      alert("Solicitud enviada con éxito");
+    }
+
+    router.push("/requests");
+  } catch (error) {
+    submitError.value = "Error al enviar la solicitud: " + error.message;
+  } finally {
+    loading.value = false;
+    imageLoading.value = false;
+    fileLoading.value = false;
+  }
+};
+
+const formattedComments = computed(() => formatComments(form.comments));
+</script>
+
+
 <template>
   <LayoutAuthenticated>
     <SectionMain>
       <SectionTitleLineWithButton
         :icon="mdiBookOutline"
-        title="Crear Nueva Solicitud de Libro"
+        :title="appealMode ? 'Editar Solicitud de Libro' : 'Crear Nueva Solicitud de Libro'"
         main
       />
       <CardBox form @submit.prevent="submit" class="max-w-3xl mx-auto">
@@ -16,7 +378,7 @@
           <span class="block sm:inline">{{ submitError }}</span>
         </div>
         <div
-          v-if="formattedComments"
+          v-if="appealMode && formattedComments"
           class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative mb-4"
           role="alert"
         >
@@ -195,7 +557,7 @@
               v-if="!loading"
               type="submit"
               color="info"
-              label="Enviar Solicitud"
+              :label="appealMode ? 'Enviar Apelación' : 'Enviar Solicitud'"
               @click="submit"
             />
             <BaseButton
@@ -216,342 +578,3 @@
     </SectionMain>
   </LayoutAuthenticated>
 </template>
-
-<script setup>
-import { reactive, ref, watch, onMounted, computed } from "vue";
-import {
-  collection,
-  addDoc,
-  doc,
-  getDoc,
-  getFirestore,
-} from "firebase/firestore";
-import { getAuth } from "firebase/auth";
-import {
-  getStorage,
-  ref as storageRef,
-  uploadBytes,
-  getDownloadURL,
-} from "firebase/storage";
-import SectionMain from "@/components/SectionMain.vue";
-import CardBox from "@/components/CardBox.vue";
-import FormField from "@/components/FormField.vue";
-import FormControl from "@/components/FormControl.vue";
-import FormFilePicker from "@/components/FormFilePicker.vue";
-import BaseDivider from "@/components/BaseDivider.vue";
-import BaseButton from "@/components/BaseButton.vue";
-import BaseButtons from "@/components/BaseButtons.vue";
-import SectionTitleLineWithButton from "@/components/SectionTitleLineWithButton.vue";
-import LayoutAuthenticated from "@/layouts/LayoutAuthenticated.vue";
-import { useRoute, useRouter } from "vue-router";
-import { mdiBookOutline } from "@mdi/js";
-import {
-  fetchCategories,
-  fetchAuthors,
-  fetchLanguages,
-} from "@/api/woocommerce";
-
-const route = useRoute();
-const router = useRouter();
-
-const categories = ref([]);
-const authors = ref([]);
-const languages = ref([]);
-const newEntry = ref({ category: "", author: "", language: "" });
-const showNewInput = reactive({
-  category: false,
-  author: false,
-  language: false,
-});
-const appealMode = ref(false);
-const requestId = ref(null);
-
-const loadRequestData = async (id) => {
-  try {
-    const db = getFirestore();
-    const requestDoc = await getDoc(doc(db, "declinedBooks", id));
-    if (requestDoc.exists()) {
-      const data = requestDoc.data();
-      Object.assign(form, data);
-      form.comments = data.comments;
-      form.imageFile = null;
-      form.file = null;
-      imagePreview.value = data.coverUrl;
-    } else {
-      throw new Error("Request not found");
-    }
-  } catch (error) {
-    console.error("Error loading request data:", error);
-  }
-};
-
-const formatComments = (comments) => {
-  return Object.entries(comments)
-    .map(([field, comment]) => {
-      return `<strong>${field}:</strong> ${comment}`;
-    })
-    .join("<br>");
-};
-
-onMounted(async () => {
-  try {
-    const categoriesResponse = await fetchCategories();
-    categories.value = categoriesResponse.data;
-
-    const authorsResponse = await fetchAuthors();
-    authors.value = authorsResponse.data;
-
-    const languagesResponse = await fetchLanguages();
-    languages.value = languagesResponse.data;
-
-    form.publisher = sessionStorage.getItem("user-name") || "";
-
-    const { appeal, id } = route.query;
-    if (appeal && id) {
-      appealMode.value = true;
-      requestId.value = id;
-      await loadRequestData(id);
-    }
-  } catch (error) {
-    console.error("Error fetching data:", error);
-  }
-});
-
-const handleSelectionChange = (event, type) => {
-  if (event.target.value === "new") {
-    showNewInput[type] = true;
-    form[type] = "";
-    errors[type] = ""; // Limpiar el mensaje de error cuando se selecciona "Añadir nuevo"
-  } else {
-    showNewInput[type] = false;
-    form[type] = event.target.value;
-  }
-};
-
-const addNewEntry = (type) => {
-  if (newEntry.value[type].trim() !== "") {
-    form[type] = newEntry.value[type].trim();
-    if (type === "category") {
-      categories.value.push({ id: form[type], name: form[type] });
-    } else if (type === "author") {
-      authors.value.push({ id: form[type], name: form[type] });
-    } else if (type === "language") {
-      languages.value.push({ id: form[type], name: form[type] });
-    }
-    showNewInput[type] = false;
-    newEntry.value[type] = "";
-  }
-};
-
-const form = reactive({
-  title: "",
-  format: "E-book",
-  file: null,
-  isbn: "",
-  category: "",
-  author: "",
-  publisher: "",
-  language: "",
-  regularPrice: "",
-  shortDescription: "",
-  description: "",
-  imageFile: null,
-  stockQuantity: 100,
-  sku: "",
-  comments: {},
-});
-
-const formattedComments = computed(() => formatComments(form.comments));
-
-const loading = ref(false);
-const imageLoading = ref(false);
-const fileLoading = ref(false);
-const errors = reactive({});
-const imagePreview = ref(null);
-const submitError = ref(null);
-
-const generateSKU = () => {
-  const date = new Date();
-  const timestamp = date.getTime();
-  return `SKU${timestamp}`;
-};
-
-const validateISBN = (isbn) => {
-  isbn = isbn.replace(/[-\s]/g, "");
-  if (isbn.length !== 10 && isbn.length !== 13) return false;
-
-  let sum = 0;
-  if (isbn.length === 10) {
-    for (let i = 0; i < 9; i++) {
-      sum += (10 - i) * parseInt(isbn.charAt(i));
-    }
-    let checksum = 11 - (sum % 11);
-    if (checksum === 11) checksum = 0;
-    if (checksum === 10) checksum = "X";
-    return checksum.toString() === isbn.charAt(9).toUpperCase();
-  } else {
-    for (let i = 0; i < 12; i++) {
-      sum += (i % 2 === 0 ? 1 : 3) * parseInt(isbn.charAt(i));
-    }
-    let checksum = 10 - (sum % 10);
-    if (checksum === 10) checksum = 0;
-    return checksum.toString() === isbn.charAt(12);
-  }
-};
-
-const validateField = (field) => {
-  switch (field) {
-    case "title":
-      errors[field] = !form[field] ? "El título es requerido" : "";
-      break;
-    case "isbn":
-      errors[field] = !form[field]
-        ? "El ISBN es requerido"
-        : !validateISBN(form[field])
-        ? "El ISBN no es válido"
-        : "";
-      break;
-    case "author":
-      errors[field] =
-        !form[field] && !showNewInput.author ? "El autor es requerido" : "";
-      break;
-    case "publisher":
-      errors[field] = !form[field] ? "La editorial es requerida" : "";
-      break;
-    case "language":
-      errors[field] =
-        !form[field] && !showNewInput.language ? "El idioma es requerido" : "";
-      break;
-    case "regularPrice":
-      errors[field] =
-        !form[field] || isNaN(form[field]) || form[field] < 0
-          ? "Se requiere un precio regular válido y no negativo"
-          : "";
-      break;
-    case "shortDescription":
-      errors[field] = !form[field] ? "La descripción corta es requerida" : "";
-      break;
-    case "imageFile":
-      errors[field] = !form[field] ? "La imagen de portada es requerida" : "";
-      break;
-    case "file":
-      errors[field] = !form[field]
-        ? "El archivo EPUB es requerido"
-        : form[field] && !form[field].name.endsWith(".epub")
-        ? "El archivo debe estar en formato EPUB"
-        : "";
-      break;
-  }
-};
-
-Object.keys(form).forEach((field) => {
-  watch(
-    () => form[field],
-    () => validateField(field)
-  );
-});
-
-const validateForm = () => {
-  Object.keys(form).forEach(validateField);
-  return Object.values(errors).every((error) => error === "");
-};
-
-const uploadFile = async (file, path) => {
-  const storage = getStorage();
-  const fileRef = storageRef(storage, path);
-  await uploadBytes(fileRef, file);
-  return getDownloadURL(fileRef);
-};
-
-const handleImageChange = (file) => {
-  form.imageFile = file;
-  errors.imageFile = "";
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    imagePreview.value = e.target.result;
-  };
-  reader.readAsDataURL(file);
-};
-
-const handleFileChange = (file) => {
-  if (file.name.endsWith(".epub")) {
-    form.file = file;
-    errors.file = "";
-  } else {
-    errors.file = "El archivo debe estar en formato EPUB";
-    form.file = null;
-  }
-};
-
-const submit = async () => {
-  submitError.value = null;
-
-  if (!validateForm()) {
-    return;
-  }
-
-  loading.value = true;
-  try {
-    const auth = getAuth();
-    const user = auth.currentUser;
-
-    if (!user) {
-      submitError.value = "Debes estar conectado para enviar una solicitud";
-      return;
-    }
-
-    const sku = generateSKU();
-
-    imageLoading.value = true;
-    const coverUrl = await uploadFile(
-      form.imageFile,
-      `covers/${sku}_${form.imageFile.name}`
-    );
-    imageLoading.value = false;
-
-    fileLoading.value = true;
-    const fileUrl = await uploadFile(
-      form.file,
-      `books/${sku}_${form.file.name}`
-    );
-    fileLoading.value = false;
-
-    const requestData = {
-      title: form.title,
-      format: form.format,
-      isbn: form.isbn,
-      category: form.category,
-      author: form.author,
-      publisher: form.publisher,
-      language: form.language,
-      regularPrice: parseFloat(form.regularPrice),
-      shortDescription: form.shortDescription,
-      description: form.description,
-      coverUrl,
-      fileUrl,
-      stockQuantity: form.stockQuantity,
-      sku,
-      status: "pending",
-      userEmail: user.email,
-      createdAt: new Date(),
-    };
-
-    const db = getFirestore();
-    const requestRef = collection(db, "bookRequests");
-    await addDoc(requestRef, requestData);
-
-    alert("Solicitud enviada con éxito");
-    router.push("/requests");
-  } catch (error) {
-    submitError.value = "Error al crear la solicitud: " + error.message;
-  } finally {
-    loading.value = false;
-    imageLoading.value = false;
-    fileLoading.value = false;
-  }
-};
-
-const cancel = () => {
-  router.push("/requests");
-};
-</script>

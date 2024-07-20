@@ -10,6 +10,48 @@ import {
 } from "firebase/firestore";
 import { db } from "@/firebase";
 
+// Añade estas importaciones al principio del archivo
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { v4 as uuidv4 } from "uuid";
+
+// Función para subir una imagen de portada
+export const uploadCoverImage = async (file) => {
+  try {
+    const storage = getStorage();
+    const fileExtension = file.name.split(".").pop();
+    const fileName = `${uuidv4()}.${fileExtension}`;
+    const storageRef = ref(storage, `covers/${fileName}`);
+
+    const snapshot = await uploadBytes(storageRef, file);
+    const downloadURL = await getDownloadURL(snapshot.ref);
+
+    console.log("Cover image uploaded successfully");
+    return downloadURL;
+  } catch (error) {
+    console.error("Error uploading cover image:", error);
+    throw error;
+  }
+};
+
+// Función para subir un archivo EPUB
+export const uploadEpubFile = async (file) => {
+  try {
+    const storage = getStorage();
+    const fileExtension = file.name.split(".").pop();
+    const fileName = `${uuidv4()}.${fileExtension}`;
+    const storageRef = ref(storage, `books/${fileName}`);
+
+    const snapshot = await uploadBytes(storageRef, file);
+    const downloadURL = await getDownloadURL(snapshot.ref);
+
+    console.log("EPUB file uploaded successfully");
+    return downloadURL;
+  } catch (error) {
+    console.error("Error uploading EPUB file:", error);
+    throw error;
+  }
+};
+
 // Fetch all book requests
 export const fetchRequests = async () => {
   try {
@@ -63,8 +105,21 @@ export const fetchRequestById = async (requestId) => {
 // Update the status of a request
 export const updateRequestStatus = async (requestId, status) => {
   try {
-    const docRef = doc(db, "bookRequests", requestId);
-    await updateDoc(docRef, { status });
+    let docRef;
+    const collections = ["bookRequests", "approvedBooks", "declinedBooks"];
+
+    for (const collectionName of collections) {
+      docRef = doc(db, collectionName, requestId);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        await updateDoc(docRef, { status });
+        console.log(`Request updated in ${collectionName} collection`);
+        return;
+      }
+    }
+
+    throw new Error("Request not found in any collection");
   } catch (error) {
     console.error("Error updating request status:", error);
     throw error;
@@ -319,3 +374,5 @@ export const fetchDeclinedRequests = async () => {
     throw error;
   }
 };
+
+// woocommerce.js

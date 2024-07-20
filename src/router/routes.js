@@ -1,3 +1,5 @@
+import { authGuard } from "@/utils/authGuard";
+
 const createRoute = (
   path,
   name,
@@ -9,11 +11,11 @@ const createRoute = (
     path,
     name,
     component: () => import(`@/views/${componentPath}.vue`),
-    meta: { title, requiresAuth }, // Simplificado
+    meta: { title, requiresAuth },
+    beforeEnter: requiresAuth ? authGuard : undefined,
   };
   return route;
 };
-
 const routeDefinitions = [
   {
     path: "/login",
@@ -128,6 +130,13 @@ const routeDefinitions = [
     title: "Nuevo Lenguaje",
   },
   {
+    path: "/category/new",
+    name: "categoryForm",
+    componentPath: "CategoryForm",
+    requiresAuth: true,
+    title: "Nueva Categoría",
+  },
+  {
     path: "/publisherForm",
     name: "publisherForm",
     componentPath: "PublisherForm",
@@ -157,6 +166,13 @@ const routeDefinitions = [
     title: "Nueva Solicitud",
   },
   {
+    path: "/changePassword",
+    name: "changePassword",
+    componentPath: "ChangePassword",
+    requiresAuth: true,
+    title: "Actualiza tu contraseña",
+  },
+  {
     path: "/requestDetailView/:id",
     name: "requestDetailView",
     componentPath: "RequestDetailView",
@@ -172,6 +188,7 @@ const routeDefinitions = [
     requiresAuth: true,
     title: "Revisar Solicitud",
   },
+
   {
     path: "/newBook",
     name: "newBook",

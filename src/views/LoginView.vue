@@ -39,6 +39,9 @@
             </BaseButtons>
             <p v-if="errorMessage" class="mt-4 text-red-500">{{ errorMessage }}</p>
             <p class="mt-4 text-center">
+  <router-link to="/password-reset" class="text-blue-500">¿Olvidaste tu contraseña?</router-link>
+</p>
+            <p class="mt-4 text-center">
               ¿Quieres publicar con nosotros?
               <router-link to="/publisher-form" class="text-blue-500">Haz clic aquí</router-link>
             </p>

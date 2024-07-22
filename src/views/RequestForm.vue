@@ -359,7 +359,6 @@ const submit = async () => {
 const formattedComments = computed(() => formatComments(form.comments));
 </script>
 
-
 <template>
   <LayoutAuthenticated>
     <SectionMain>
@@ -386,7 +385,7 @@ const formattedComments = computed(() => formatComments(form.comments));
           <span class="block sm:inline" v-html="formattedComments"></span>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField label="Imagen de Portada" :error="errors.imageFile">
+          <FormField label="Imagen de Portada *" :error="errors.imageFile">
             <FormFilePicker
               v-model="form.imageFile"
               @update:modelValue="handleImageChange"
@@ -403,7 +402,7 @@ const formattedComments = computed(() => formatComments(form.comments));
               Subiendo imagen...
             </p>
           </FormField>
-          <FormField label="Archivo EPUB" :error="errors.file">
+          <FormField label="Archivo EPUB *" :error="errors.file">
             <FormFilePicker
               v-model="form.file"
               @update:modelValue="handleFileChange"
@@ -416,14 +415,14 @@ const formattedComments = computed(() => formatComments(form.comments));
         </div>
         <BaseDivider />
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField label="Título" :error="errors.title">
+          <FormField label="Título *" :error="errors.title">
             <FormControl
               v-model="form.title"
               type="text"
               placeholder="Título del libro"
             />
           </FormField>
-          <FormField label="ISBN" :error="errors.isbn">
+          <FormField label="ISBN *" :error="errors.isbn">
             <FormControl v-model="form.isbn" type="text" placeholder="ISBN" />
           </FormField>
           <FormField label="Categoría">
@@ -457,7 +456,7 @@ const formattedComments = computed(() => formatComments(form.comments));
               />
             </div>
           </FormField>
-          <FormField label="Autor" :error="errors.author">
+          <FormField label="Autor *" :error="errors.author">
             <select
               v-model="form.author"
               @change="(e) => handleSelectionChange(e, 'author')"
@@ -488,7 +487,7 @@ const formattedComments = computed(() => formatComments(form.comments));
               />
             </div>
           </FormField>
-          <FormField label="Editorial" :error="errors.publisher">
+          <FormField label="Editorial *" :error="errors.publisher">
             <FormControl
               v-model="form.publisher"
               type="text"
@@ -496,7 +495,7 @@ const formattedComments = computed(() => formatComments(form.comments));
               disabled
             />
           </FormField>
-          <FormField label="Idioma" :error="errors.language">
+          <FormField label="Idioma *" :error="errors.language">
             <select
               v-model="form.language"
               @change="(e) => handleSelectionChange(e, 'language')"
@@ -527,7 +526,7 @@ const formattedComments = computed(() => formatComments(form.comments));
               />
             </div>
           </FormField>
-          <FormField label="Precio Regular ($)" :error="errors.regularPrice">
+          <FormField label="Precio Regular ($) *" :error="errors.regularPrice">
             <FormControl
               v-model.number="form.regularPrice"
               type="number"
@@ -537,7 +536,7 @@ const formattedComments = computed(() => formatComments(form.comments));
             />
           </FormField>
         </div>
-        <FormField label="Descripción Corta" :error="errors.shortDescription">
+        <FormField label="Descripción Corta *" :error="errors.shortDescription">
           <FormControl
             v-model="form.shortDescription"
             type="textarea"

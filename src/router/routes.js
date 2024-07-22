@@ -47,6 +47,13 @@ const routeDefinitions = [
     title: "Categorias",
   },
   {
+    path: "/password-reset",
+    name: "password-rest",
+    componentPath: "PasswordReset",
+    requiresAuth: false,
+    title: "Reset",
+  },
+  {
     path: "/authors",
     name: "authors",
     componentPath: "AuthorView",

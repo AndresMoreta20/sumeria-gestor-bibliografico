@@ -7,24 +7,24 @@
         <p class="text-center mb-6">Fecha de solicitud: {{ form.solicitudDate }}</p>
 
         <FormField label="RUC *" help="RUC">
-          <input v-model="form.ruc" name="ruc" required class="form-input w-full" />
+          <input v-model="form.ruc" name="ruc" required class="form-input w-full" :class="{ 'border-red-500': errors.ruc }" />
           <p v-if="errors.ruc" class="text-red-500">{{ errors.ruc }}</p>
         </FormField>
         <FormField label="Razón social de la editorial *" help="Razón social">
-          <input v-model="form.razonSocial" name="razonSocial" required class="form-input w-full" />
+          <input v-model="form.razonSocial" name="razonSocial" required class="form-input w-full" :class="{ 'border-red-500': errors.razonSocial }" />
           <p v-if="errors.razonSocial" class="text-red-500">{{ errors.razonSocial }}</p>
         </FormField>
         <FormField label="Correo electrónico *" help="Correo electrónico">
-          <input v-model="form.email" name="email" type="email" required class="form-input w-full" />
+          <input v-model="form.email" name="email" type="email" required class="form-input w-full" :class="{ 'border-red-500': errors.email }" />
           <p v-if="errors.email" class="text-red-500">{{ errors.email }}</p>
         </FormField>
         <FormField label="Sigla" help="Sigla">
-          <input v-model="form.sigla" name="sigla" class="form-input w-full" />
+          <input v-model="form.sigla" name="sigla" class="form-input w-full" :class="{ 'border-red-500': errors.sigla }" />
           <p v-if="errors.sigla" class="text-red-500">{{ errors.sigla }}</p>
         </FormField>
 
         <FormField label="Provincia *" help="Provincia">
-          <select v-model="form.departamento" name="departamento" required class="form-select w-full" @change="updateCiudades">
+          <select v-model="form.departamento" name="departamento" required class="form-select w-full" @change="updateCiudades" :class="{ 'border-red-500': errors.departamento }">
             <option value="" disabled selected>Seleccione una provincia</option>
             <option v-for="provincia in provincias" :key="provincia" :value="provincia">{{ provincia }}</option>
           </select>
@@ -32,7 +32,7 @@
         </FormField>
 
         <FormField label="Ciudad *" help="Ciudad">
-          <select v-model="form.ciudad" name="ciudad" required class="form-select w-full" :disabled="!form.departamento">
+          <select v-model="form.ciudad" name="ciudad" required class="form-select w-full" :disabled="!form.departamento" :class="{ 'border-red-500': errors.ciudad }">
             <option value="" disabled selected>Seleccione una ciudad</option>
             <option v-for="ciudad in ciudadesDisponibles" :key="ciudad" :value="ciudad">{{ ciudad }}</option>
           </select>
@@ -40,22 +40,22 @@
         </FormField>
 
         <FormField label="Dirección *" help="Dirección">
-          <input v-model="form.direccion" name="direccion" required class="form-input w-full" />
+          <input v-model="form.direccion" name="direccion" required class="form-input w-full" :class="{ 'border-red-500': errors.direccion }" />
           <p v-if="errors.direccion" class="text-red-500">{{ errors.direccion }}</p>
         </FormField>
 
         <FormField label="Código Postal *" help="Código Postal">
-          <input v-model="form.codigoPostal" name="codigoPostal" type="text" required class="form-input w-full" />
+          <input v-model="form.codigoPostal" name="codigoPostal" type="text" required class="form-input w-full" :class="{ 'border-red-500': errors.codigoPostal }" />
           <p v-if="errors.codigoPostal" class="text-red-500">{{ errors.codigoPostal }}</p>
         </FormField>
 
         <FormField label="Teléfono *" help="Teléfono">
-          <input v-model="form.telefono" name="telefono" type="tel" required class="form-input w-full" />
+          <input v-model="form.telefono" name="telefono" type="tel" required class="form-input w-full" :class="{ 'border-red-500': errors.telefono }" />
           <p v-if="errors.telefono" class="text-red-500">{{ errors.telefono }}</p>
         </FormField>
 
         <FormField label="Página web o URL" help="Página web">
-          <input v-model="form.paginaWeb" name="paginaWeb" type="url" class="form-input w-full" />
+          <input v-model="form.paginaWeb" name="paginaWeb" type="url" class="form-input w-full" :class="{ 'border-red-500': errors.paginaWeb }" />
           <p v-if="errors.paginaWeb" class="text-red-500">{{ errors.paginaWeb }}</p>
         </FormField>
 
@@ -679,6 +679,22 @@ watch(() => form.telefono, (newValue) => validatePhoneNumber(newValue));
 watch(() => form.paginaWeb, (newValue) => validateWebsite(newValue));
 
 const submit = async () => {
+  // Verificar campos vacíos
+  const requiredFields = ['ruc', 'razonSocial', 'email', 'departamento', 'ciudad', 'direccion', 'codigoPostal', 'telefono'];
+  let hasEmptyFields = false;
+
+  requiredFields.forEach(field => {
+    if (!form[field]) {
+      errors[field] = `Este campo es obligatorio`;
+      hasEmptyFields = true;
+    }
+  });
+
+  if (hasEmptyFields) {
+    errorMessage.value = 'Por favor, complete todos los campos obligatorios.';
+    return;
+  }
+
   const isValid = validateRuc(form.ruc) &&
                   validateEmail(form.email) &&
                   validatePhoneNumber(form.telefono) &&
@@ -744,7 +760,7 @@ const cancel = () => {
 .form-select, .form-input {
   @apply block w-full px-3 py-2 mb-4 border rounded-md shadow-sm focus:outline-none focus:ring focus:border-blue-300;
 }
-</style>
 
+</style>
 
 
